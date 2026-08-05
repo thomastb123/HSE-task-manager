@@ -1397,43 +1397,924 @@ body {
     </div>
   </div>
 
-  <!-- External Script Fallbacks -->
-  <script src="js/store.js"></script>
-  <script src="js/department.js"></script>
-  <script src="js/officers.js"></script>
-  <script src="js/app.js"></script>
-
-  <!-- Embedded Full Standalone Application Scripts -->
+  <!-- EMBEDDED COMPLETE APPLICATION LOGIC (STORE, CONTROLLER, ROSTER, APP) -->
   <script>
-    // Save Data File Button
-    document.getElementById('btn-export-data').addEventListener('click', () => {
-      if (window.hseStore) window.hseStore.exportDatabaseJSON();
+/* -------------------------------------------------------------
+ * 1. HSE STORE DATA MODEL
+ * ------------------------------------------------------------- */
+const CLOUD_CONFIG = {
+  ENABLED: false,
+  SUPABASE_URL: '',
+  SUPABASE_KEY: ''
+};
+
+const STORAGE_KEYS = {
+  OFFICERS_BY_DEPT: 'hse_dept_officers_main_v12',
+  LEAVES: 'hse_dept_leaves_main_v12',
+  ACTIVITIES: 'hse_dept_activities_main_v12',
+  ROUTINE_JOBS: 'hse_dept_routine_jobs_v12'
+};
+
+const DEFAULT_DEPARTMENT_OFFICERS = {
+  safety: ['Dhankar B P', 'Smit Kumar Pal', 'Sunil Kumar C P', 'Akhil Vivek', 'Thomas T B', 'Afreedin Vahab E T', 'Prasanth Soni'],
+  fire: ['Bimalraj V L', 'Satish Jagjiwan Alone', 'Narayanan K P', 'Mohammed Fasil M', 'Roshan Poly', 'Ashutosh Pratap Sisaudia', 'Gireesh K'],
+  ohc: ['Santhosh S', 'Deepthi'],
+  environment: ['Suresh K S', 'Anand G', 'Aakash R Kannan', 'Rajendraprasad K G'],
+  psm: ['Cijy V', 'Rajesh E R', 'Alamgeer Khan K H'],
+  electrical: ['Saju K S', 'Chandrababu S'],
+  contractor: ['Sarwesh Kumar', 'Muhammed Ashraf']
+};
+
+const DEFAULT_LEAVES = [
+  { id: 'l1', dept: 'safety', person: 'Dhankar B P', fromDate: '2026-08-03', toDate: '2026-08-06', reason: 'Annual Personal Work' },
+  { id: 'l2', dept: 'fire', person: 'Bimalraj V L', fromDate: '2026-08-05', toDate: '2026-08-07', reason: 'Fire Hydrant Regional Training' }
+];
+
+const DEFAULT_ACTIVITIES = [
+  {
+    id: 'act-1',
+    dept: 'safety',
+    slNo: 1,
+    activityName: 'Quarterly Plant Safety Walkthrough & Hazard Audit',
+    responsiblePersons: ['Sunil Kumar C P', 'Thomas T B'],
+    fromDate: '2026-08-02',
+    toDate: '2026-08-06',
+    isMajorActivity: 'Yes',
+    priority: 'High',
+    status: 'Pending',
+    statusHistory: [
+      { id: 'sh-1', timestamp: '8/2/2026, 9:00:00 AM', updatedBy: 'Sunil Kumar C P', previousStatus: '-', newStatus: 'Pending', note: 'High priority safety inspection initiated.' }
+    ]
+  }
+];
+
+const DEFAULT_ROUTINE_JOBS = [
+  { id: 'rj-1', dept: 'safety', slNo: 1, jobName: 'Daily Plant Safety & PPE Compliance Inspection', responsibleOfficer: 'Dhankar B P', secondLineOfficer: 'Smit Kumar Pal', nature: 'Daily', customNature: '', status: 'Pending', statusHistory: [] },
+  { id: 'rj-2', dept: 'fire', slNo: 1, jobName: 'Monthly Fire Engine & Pump Operational Test', responsibleOfficer: 'Bimalraj V L', secondLineOfficer: 'Satish Jagjiwan Alone', nature: 'Monthly', customNature: '', status: 'Pending', statusHistory: [] }
+];
+
+class HSEStore {
+  constructor() {
+    this.init();
+    if (CLOUD_CONFIG.ENABLED && CLOUD_CONFIG.SUPABASE_URL) {
+      this.tryLoadFromCloud();
+    } else {
+      this.tryLoadFromCentralServer();
+    }
+  }
+
+  init() {
+    if (!localStorage.getItem(STORAGE_KEYS.OFFICERS_BY_DEPT)) {
+      localStorage.setItem(STORAGE_KEYS.OFFICERS_BY_DEPT, JSON.stringify(DEFAULT_DEPARTMENT_OFFICERS));
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.LEAVES)) {
+      localStorage.setItem(STORAGE_KEYS.LEAVES, JSON.stringify(DEFAULT_LEAVES));
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.ACTIVITIES)) {
+      localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(DEFAULT_ACTIVITIES));
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.ROUTINE_JOBS)) {
+      localStorage.setItem(STORAGE_KEYS.ROUTINE_JOBS, JSON.stringify(DEFAULT_ROUTINE_JOBS));
+    }
+  }
+
+  async tryLoadFromCloud() {
+    try {
+      const resp = await fetch(`${CLOUD_CONFIG.SUPABASE_URL}/rest/v1/hse_store?select=*`, {
+        headers: { 'apikey': CLOUD_CONFIG.SUPABASE_KEY, 'Authorization': `Bearer ${CLOUD_CONFIG.SUPABASE_KEY}` }
+      });
+      if (resp.ok) {
+        const rows = await resp.json();
+        if (rows && rows.length > 0 && rows[0].data) {
+          this.importDatabaseJSON(rows[0].data, false);
+        }
+      }
+    } catch (e) {}
+  }
+
+  async tryLoadFromCentralServer() {
+    try {
+      const resp = await fetch('/api/database');
+      if (resp.ok) {
+        const fileData = await resp.json();
+        if (fileData && fileData.officersByDept) {
+          this.importDatabaseJSON(fileData, false);
+        }
+      }
+    } catch (e) {}
+  }
+
+  async saveToCentralServer() {
+    const fullData = {
+      officersByDept: this.getAllDepartmentOfficers(),
+      leaves: this.getLeaves(),
+      activities: this.getActivities(),
+      routineJobs: this.getRoutineJobs()
+    };
+
+    if (CLOUD_CONFIG.ENABLED && CLOUD_CONFIG.SUPABASE_URL) {
+      try {
+        await fetch(`${CLOUD_CONFIG.SUPABASE_URL}/rest/v1/hse_store`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': CLOUD_CONFIG.SUPABASE_KEY, 'Authorization': `Bearer ${CLOUD_CONFIG.SUPABASE_KEY}`, 'Prefer': 'resolution=merge-duplicates' },
+          body: JSON.stringify({ id: 1, data: fullData })
+        });
+      } catch (e) {}
+    } else {
+      try {
+        await fetch('/api/database', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(fullData)
+        });
+      } catch (e) {}
+    }
+  }
+
+  exportDatabaseJSON() {
+    const fullData = {
+      officersByDept: this.getAllDepartmentOfficers(),
+      leaves: this.getLeaves(),
+      activities: this.getActivities(),
+      routineJobs: this.getRoutineJobs()
+    };
+    const blob = new Blob([JSON.stringify(fullData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'hse_database.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  importDatabaseJSON(jsonObj, syncServer = true) {
+    if (jsonObj.officersByDept) localStorage.setItem(STORAGE_KEYS.OFFICERS_BY_DEPT, JSON.stringify(jsonObj.officersByDept));
+    if (jsonObj.leaves) localStorage.setItem(STORAGE_KEYS.LEAVES, JSON.stringify(jsonObj.leaves));
+    if (jsonObj.activities) localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(jsonObj.activities));
+    if (jsonObj.routineJobs) localStorage.setItem(STORAGE_KEYS.ROUTINE_JOBS, JSON.stringify(jsonObj.routineJobs));
+    if (syncServer) this.saveToCentralServer();
+  }
+
+  getAllDepartmentOfficers() {
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.OFFICERS_BY_DEPT) || JSON.stringify(DEFAULT_DEPARTMENT_OFFICERS));
+  }
+
+  getOfficersByDept(deptKey) {
+    const all = this.getAllDepartmentOfficers();
+    return all[deptKey] || [];
+  }
+
+  addOfficerToDept(deptKey, name) {
+    const all = this.getAllDepartmentOfficers();
+    if (!all[deptKey]) all[deptKey] = [];
+    const trimmed = name.trim();
+    if (trimmed && !all[deptKey].includes(trimmed)) {
+      all[deptKey].push(trimmed);
+      localStorage.setItem(STORAGE_KEYS.OFFICERS_BY_DEPT, JSON.stringify(all));
+      this.saveToCentralServer();
+    }
+    return all[deptKey];
+  }
+
+  removeOfficerFromDept(deptKey, name) {
+    const all = this.getAllDepartmentOfficers();
+    if (all[deptKey]) {
+      all[deptKey] = all[deptKey].filter(n => n !== name);
+      localStorage.setItem(STORAGE_KEYS.OFFICERS_BY_DEPT, JSON.stringify(all));
+      this.saveToCentralServer();
+    }
+    return all[deptKey];
+  }
+
+  getLeaves(deptKey = null) {
+    const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.LEAVES) || '[]');
+    if (deptKey) return all.filter(l => l.dept === deptKey || (!l.dept && deptKey === 'safety'));
+    return all;
+  }
+
+  addLeave(leaveData) {
+    const leaves = JSON.parse(localStorage.getItem(STORAGE_KEYS.LEAVES) || '[]');
+    const newLeave = { id: 'l-' + Date.now(), ...leaveData };
+    leaves.push(newLeave);
+    localStorage.setItem(STORAGE_KEYS.LEAVES, JSON.stringify(leaves));
+    this.saveToCentralServer();
+    return newLeave;
+  }
+
+  updateLeave(id, updatedData) {
+    const leaves = JSON.parse(localStorage.getItem(STORAGE_KEYS.LEAVES) || '[]');
+    const idx = leaves.findIndex(l => l.id === id);
+    if (idx !== -1) {
+      leaves[idx] = { ...leaves[idx], ...updatedData };
+      localStorage.setItem(STORAGE_KEYS.LEAVES, JSON.stringify(leaves));
+      this.saveToCentralServer();
+    }
+    return leaves;
+  }
+
+  removeLeave(id) {
+    let leaves = JSON.parse(localStorage.getItem(STORAGE_KEYS.LEAVES) || '[]');
+    leaves = leaves.filter(l => l.id !== id);
+    localStorage.setItem(STORAGE_KEYS.LEAVES, JSON.stringify(leaves));
+    this.saveToCentralServer();
+    return leaves;
+  }
+
+  getActivities(deptKey = null) {
+    const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVITIES) || '[]');
+    if (deptKey) return all.filter(a => a.dept === deptKey || (!a.dept && deptKey === 'safety'));
+    return all;
+  }
+
+  addActivity(activityData) {
+    const activities = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVITIES) || '[]');
+    const deptActs = activityData.dept ? activities.filter(a => a.dept === activityData.dept) : activities;
+    const nextSlNo = deptActs.length > 0 ? Math.max(...deptActs.map(a => a.slNo || 0)) + 1 : 1;
+    
+    const newActivity = {
+      id: 'act-' + Date.now(),
+      slNo: nextSlNo,
+      dept: activityData.dept || 'safety',
+      activityName: activityData.activityName,
+      responsiblePersons: activityData.responsiblePersons,
+      fromDate: activityData.fromDate,
+      toDate: activityData.toDate,
+      isMajorActivity: activityData.isMajorActivity || 'No',
+      priority: activityData.priority || 'Medium',
+      status: 'Pending',
+      statusHistory: [
+        { id: 'sh-' + Date.now(), timestamp: new Date().toLocaleString(), updatedBy: activityData.createdBy || 'Officer', previousStatus: '-', newStatus: 'Pending', note: 'Job Plan created.' }
+      ]
+    };
+
+    activities.push(newActivity);
+    localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(activities));
+    this.saveToCentralServer();
+    return newActivity;
+  }
+
+  updateActivityMajorStatus(activityId, isMajor) {
+    const activities = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVITIES) || '[]');
+    const activity = activities.find(a => a.id === activityId);
+    if (activity) {
+      activity.isMajorActivity = isMajor;
+      localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(activities));
+      this.saveToCentralServer();
+    }
+    return activities;
+  }
+
+  updateActivityPriority(activityId, newPriority) {
+    const activities = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVITIES) || '[]');
+    const activity = activities.find(a => a.id === activityId);
+    if (activity) {
+      activity.priority = newPriority;
+      localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(activities));
+      this.saveToCentralServer();
+    }
+    return activities;
+  }
+
+  updateActivityStatus(activityId, newStatus, updateNote, updatedBy) {
+    const activities = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVITIES) || '[]');
+    const activity = activities.find(a => a.id === activityId);
+    
+    if (activity) {
+      const prevStatus = activity.status;
+      activity.status = newStatus;
+      if (!activity.statusHistory) activity.statusHistory = [];
+      activity.statusHistory.unshift({
+        id: 'sh-' + Date.now(),
+        timestamp: new Date().toLocaleString(),
+        updatedBy: updatedBy || 'Officer',
+        previousStatus: prevStatus,
+        newStatus: newStatus,
+        note: updateNote || 'Status updated.'
+      });
+      localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(activities));
+      this.saveToCentralServer();
+    }
+    return activities;
+  }
+
+  deleteActivity(activityId) {
+    let activities = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVITIES) || '[]');
+    const target = activities.find(a => a.id === activityId);
+    const deptKey = target ? target.dept : null;
+    activities = activities.filter(a => a.id !== activityId);
+    if (deptKey) {
+      const deptActs = activities.filter(a => a.dept === deptKey);
+      deptActs.forEach((act, idx) => { act.slNo = idx + 1; });
+    }
+    localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(activities));
+    this.saveToCentralServer();
+    return activities;
+  }
+
+  getRoutineJobs(deptKey = null) {
+    const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.ROUTINE_JOBS) || '[]');
+    if (deptKey) return all.filter(j => j.dept === deptKey || (!j.dept && deptKey === 'safety'));
+    return all;
+  }
+
+  addRoutineJob(jobData) {
+    const jobs = JSON.parse(localStorage.getItem(STORAGE_KEYS.ROUTINE_JOBS) || '[]');
+    const deptJobs = jobData.dept ? jobs.filter(j => j.dept === jobData.dept) : jobs;
+    const nextSlNo = deptJobs.length > 0 ? Math.max(...deptJobs.map(j => j.slNo || 0)) + 1 : 1;
+
+    const newJob = {
+      id: 'rj-' + Date.now(),
+      slNo: nextSlNo,
+      dept: jobData.dept || 'safety',
+      jobName: jobData.jobName,
+      responsibleOfficer: jobData.responsibleOfficer,
+      secondLineOfficer: jobData.secondLineOfficer || 'None',
+      nature: jobData.nature,
+      customNature: jobData.customNature || '',
+      status: 'Pending',
+      statusHistory: []
+    };
+
+    jobs.push(newJob);
+    localStorage.setItem(STORAGE_KEYS.ROUTINE_JOBS, JSON.stringify(jobs));
+    this.saveToCentralServer();
+    return newJob;
+  }
+
+  updateRoutineJobOfficers(jobId, primaryOfficer, secondLineOfficer) {
+    const jobs = JSON.parse(localStorage.getItem(STORAGE_KEYS.ROUTINE_JOBS) || '[]');
+    const job = jobs.find(j => j.id === jobId);
+    if (job) {
+      if (primaryOfficer) job.responsibleOfficer = primaryOfficer;
+      if (secondLineOfficer) job.secondLineOfficer = secondLineOfficer;
+      localStorage.setItem(STORAGE_KEYS.ROUTINE_JOBS, JSON.stringify(jobs));
+      this.saveToCentralServer();
+    }
+    return jobs;
+  }
+
+  deleteRoutineJob(jobId) {
+    let jobs = JSON.parse(localStorage.getItem(STORAGE_KEYS.ROUTINE_JOBS) || '[]');
+    const target = jobs.find(j => j.id === jobId);
+    const deptKey = target ? target.dept : null;
+    jobs = jobs.filter(j => j.id !== jobId);
+    if (deptKey) {
+      const deptJobs = jobs.filter(j => j.dept === deptKey);
+      deptJobs.forEach((j, idx) => { j.slNo = idx + 1; });
+    }
+    localStorage.setItem(STORAGE_KEYS.ROUTINE_JOBS, JSON.stringify(jobs));
+    this.saveToCentralServer();
+    return jobs;
+  }
+}
+
+window.hseStore = new HSEStore();
+
+/* -------------------------------------------------------------
+ * 2. DEPARTMENT CONTROLLER LOGIC
+ * ------------------------------------------------------------- */
+window.openModal = function(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) modal.classList.add('active');
+};
+
+window.closeModal = function(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) modal.classList.remove('active');
+};
+
+let currentActiveDept = 'safety';
+let currentDate = new Date();
+let selectedPersonsForNewActivity = [];
+let editingLeaveId = null;
+
+const DEPT_CONFIGS = {
+  safety: { title: 'Safety section', officerLabel: 'Safety Officers' },
+  fire: { title: 'Fire section', officerLabel: 'Fire Officers' },
+  ohc: { title: 'Occupational Health Center (OHC) section', officerLabel: 'OHC Officers' },
+  environment: { title: 'Environment & Sustainability section', officerLabel: 'Environment Officers' },
+  psm: { title: 'Process Safety Management (PSM) section', officerLabel: 'PSM Officers' },
+  electrical: { title: 'Electrical Safety section', officerLabel: 'Electrical Safety Officers' },
+  contractor: { title: 'Contractor Safety section', officerLabel: 'Contractor Safety Officers' }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  initDepartmentNavigation();
+  initSubTabs();
+  initCalendar();
+  initLeaveForm();
+  initActivityForm();
+  initRoutineJobForm();
+  initFilterControls();
+  initRoutineFilterControls();
+  initOfficerReportControls();
+  initSectionMasterReportControls();
+  renderDepartmentView();
+});
+
+function initDepartmentNavigation() {
+  const deptTabBtns = document.querySelectorAll('.dept-tab-btn');
+  deptTabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetDept = btn.getAttribute('data-dept');
+      deptTabBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (window.switchActiveDepartment) window.switchActiveDepartment(targetDept);
+    });
+  });
+}
+
+window.switchActiveDepartment = function(deptKey) {
+  if (deptKey === 'officer-report') {
+    showPrimaryViewPanel('dept-view-officer-report');
+    renderOfficerWorkReportPrimary();
+    return;
+  }
+  if (deptKey === 'master-report') {
+    showPrimaryViewPanel('dept-view-master-report');
+    renderSectionMasterReport();
+    return;
+  }
+  if (deptKey === 'roster') {
+    showPrimaryViewPanel('dept-view-roster');
+    renderOfficerRosterCards();
+    return;
+  }
+  if (DEPT_CONFIGS[deptKey]) {
+    currentActiveDept = deptKey;
+    showPrimaryViewPanel('dept-view-stage');
+    renderDepartmentView();
+  }
+};
+
+function showPrimaryViewPanel(panelId) {
+  const stage = document.getElementById('dept-view-stage');
+  const roster = document.getElementById('dept-view-roster');
+  const offReport = document.getElementById('dept-view-officer-report');
+  const masterReport = document.getElementById('dept-view-master-report');
+
+  if (stage) stage.style.display = 'none';
+  if (roster) roster.style.display = 'none';
+  if (offReport) offReport.style.display = 'none';
+  if (masterReport) masterReport.style.display = 'none';
+
+  const target = document.getElementById(panelId);
+  if (target) target.style.display = 'block';
+}
+
+function renderDepartmentView() {
+  const deptTitleEl = document.getElementById('dept-hub-title');
+  if (deptTitleEl && DEPT_CONFIGS[currentActiveDept]) {
+    deptTitleEl.textContent = DEPT_CONFIGS[currentActiveDept].title;
+  }
+  populateOfficerSelects();
+  renderCalendar();
+  renderActivitiesTable();
+  renderRoutineJobsTable();
+}
+
+function initSubTabs() {
+  const subTabBtns = document.querySelectorAll('.sub-icon-btn');
+  const viewPanels = document.querySelectorAll('.safety-panel');
+
+  subTabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetView = btn.getAttribute('data-target');
+      subTabBtns.forEach(b => b.classList.remove('active'));
+      viewPanels.forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      const activePanel = document.getElementById(targetView);
+      if (activePanel) activePanel.classList.add('active');
+
+      if (targetView === 'leave-plans-view') renderCalendar();
+      else if (targetView === 'activities-view') renderActivitiesTable();
+      else if (targetView === 'routine-jobs-view') renderRoutineJobsTable();
+    });
+  });
+}
+
+function initCalendar() {
+  const prevBtn = document.getElementById('cal-prev-month');
+  const nextBtn = document.getElementById('cal-next-month');
+  const todayBtn = document.getElementById('cal-today');
+  const addLeaveBtn = document.getElementById('btn-add-leave');
+
+  if (prevBtn) prevBtn.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); });
+  if (nextBtn) nextBtn.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); });
+  if (todayBtn) todayBtn.addEventListener('click', () => { currentDate = new Date(); renderCalendar(); });
+  if (addLeaveBtn) addLeaveBtn.addEventListener('click', () => { openLeaveModal(); });
+
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const calTitle = document.getElementById('cal-month-title');
+  const calGrid = document.getElementById('calendar-grid-cells');
+  if (!calTitle || !calGrid) return;
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  calTitle.textContent = `${monthNames[month]} ${year}`;
+
+  const firstDayIndex = new Date(year, month, 1).getDay();
+  const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
+  const prevMonthTotalDays = new Date(year, month, 0).getDate();
+
+  calGrid.innerHTML = '';
+
+  const leaves = window.hseStore.getLeaves(currentActiveDept);
+  const activities = window.hseStore.getActivities(currentActiveDept);
+  const majorActivities = activities.filter(a => a.isMajorActivity === 'Yes');
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  for (let x = firstDayIndex; x > 0; x--) {
+    const dayNum = prevMonthTotalDays - x + 1;
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell other-month';
+    cell.innerHTML = `<span class="date-num">${dayNum}</span>`;
+    calGrid.appendChild(cell);
+  }
+
+  for (let i = 1; i <= totalDaysInMonth; i++) {
+    const dayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell';
+    if (dayStr === todayStr) cell.classList.add('today');
+
+    cell.addEventListener('click', (e) => {
+      if (e.target === cell || e.target.classList.contains('date-num')) openLeaveModal(null, dayStr);
     });
 
-    // Load Data File Button
-    const fileInput = document.getElementById('import-file-input');
-    document.getElementById('btn-import-data-trigger').addEventListener('click', () => {
-      fileInput.click();
+    const dateHeader = document.createElement('div');
+    dateHeader.className = 'date-num';
+    dateHeader.textContent = i;
+    cell.appendChild(dateHeader);
+
+    const eventsContainer = document.createElement('div');
+    eventsContainer.className = 'cal-cell-events';
+
+    const matchingLeaves = leaves.filter(l => dayStr >= l.fromDate && dayStr <= l.toDate);
+    matchingLeaves.forEach(leave => {
+      const badge = document.createElement('div');
+      badge.className = 'leave-badge leave-casual';
+      const shortPerson = leave.person.length > 15 ? leave.person.substring(0, 13) + '...' : leave.person;
+      badge.title = `Leave Plan: ${leave.person}\nDuration: ${leave.fromDate} to ${leave.toDate}`;
+      badge.innerHTML = `🌴 <strong>${shortPerson}</strong>`;
+      badge.addEventListener('click', (e) => { e.stopPropagation(); showLeaveDetailModal(leave); });
+      eventsContainer.appendChild(badge);
     });
 
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-          try {
-            const jsonObj = JSON.parse(evt.target.result);
-            if (window.hseStore) window.hseStore.importDatabaseJSON(jsonObj);
-            alert('Successfully loaded data file into HSE Task Manager!');
-            location.reload();
-          } catch (err) {
-            alert('Invalid JSON data file.');
-          }
-        };
-        reader.readAsText(file);
+    const matchingMajorActivities = majorActivities.filter(a => dayStr >= a.fromDate && dayStr <= a.toDate);
+    matchingMajorActivities.forEach(act => {
+      const badge = document.createElement('div');
+      badge.className = 'leave-badge leave-onduty';
+      badge.style.background = '#fef3c7'; badge.style.color = '#92400e'; badge.style.borderLeft = '3px solid #d97706';
+      const shortActTitle = act.activityName.length > 18 ? act.activityName.substring(0, 16) + '...' : act.activityName;
+      badge.title = `Major Job: ${act.activityName}\nOfficers: ${act.responsiblePersons.join(', ')}`;
+      badge.innerHTML = `⭐ <strong>${shortActTitle}</strong>`;
+      eventsContainer.appendChild(badge);
+    });
+
+    cell.appendChild(eventsContainer);
+    calGrid.appendChild(cell);
+  }
+
+  const totalRendered = firstDayIndex + totalDaysInMonth;
+  const remainingCells = (7 - (totalRendered % 7)) % 7;
+  for (let j = 1; j <= remainingCells; j++) {
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell other-month';
+    cell.innerHTML = `<span class="date-num">${j}</span>`;
+    calGrid.appendChild(cell);
+  }
+}
+window.renderCalendar = renderCalendar;
+
+function initLeaveForm() {
+  const leaveForm = document.getElementById('leave-form');
+  const memberSelect = document.getElementById('leave-person-select');
+  populateOfficerSelects();
+
+  if (leaveForm) {
+    leaveForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      let person = memberSelect.value;
+      const customPersonInput = document.getElementById('leave-person-custom').value.trim();
+      if (person === '__NEW__' && customPersonInput) {
+        person = customPersonInput;
+        window.hseStore.addOfficerToDept(currentActiveDept, person);
+        populateOfficerSelects();
+      }
+
+      const leaveData = {
+        dept: currentActiveDept,
+        person: person,
+        fromDate: document.getElementById('leave-from-date').value,
+        toDate: document.getElementById('leave-to-date').value,
+        reason: document.getElementById('leave-reason').value
+      };
+
+      if (!person || person === '__NEW__' || !leaveData.fromDate || !leaveData.toDate) {
+        alert('Please fill out all required leave fields.'); return;
+      }
+
+      if (editingLeaveId) { window.hseStore.updateLeave(editingLeaveId, leaveData); editingLeaveId = null; }
+      else { window.hseStore.addLeave(leaveData); }
+
+      window.closeModal('leave-modal');
+      leaveForm.reset();
+      document.getElementById('custom-person-group').style.display = 'none';
+      renderCalendar();
+    });
+  }
+
+  if (memberSelect) {
+    memberSelect.addEventListener('change', (e) => {
+      const customGrp = document.getElementById('custom-person-group');
+      if (e.target.value === '__NEW__') customGrp.style.display = 'block';
+      else customGrp.style.display = 'none';
+    });
+  }
+}
+
+function openLeaveModal(leaveToEdit = null, selectedDate = null) {
+  populateOfficerSelects();
+  const modalTitle = document.getElementById('leave-modal-title');
+  const leaveForm = document.getElementById('leave-form');
+  if (leaveForm) leaveForm.reset();
+
+  if (leaveToEdit) {
+    editingLeaveId = leaveToEdit.id;
+    if (modalTitle) modalTitle.textContent = `Edit Leave Plan (${DEPT_CONFIGS[currentActiveDept].officerLabel})`;
+    const memberSelect = document.getElementById('leave-person-select');
+    const customInput = document.getElementById('leave-person-custom');
+    const customGrp = document.getElementById('custom-person-group');
+
+    const exists = Array.from(memberSelect.options).some(opt => opt.value === leaveToEdit.person);
+    if (exists) { memberSelect.value = leaveToEdit.person; customGrp.style.display = 'none'; }
+    else { memberSelect.value = '__NEW__'; customGrp.style.display = 'block'; customInput.value = leaveToEdit.person; }
+
+    document.getElementById('leave-from-date').value = leaveToEdit.fromDate;
+    document.getElementById('leave-to-date').value = leaveToEdit.toDate;
+    document.getElementById('leave-reason').value = leaveToEdit.reason || '';
+  } else {
+    editingLeaveId = null;
+    if (modalTitle) modalTitle.textContent = `Add Leave Plan (${DEPT_CONFIGS[currentActiveDept].officerLabel})`;
+    document.getElementById('custom-person-group').style.display = 'none';
+    const targetDate = selectedDate || new Date().toISOString().split('T')[0];
+    document.getElementById('leave-from-date').value = targetDate;
+    document.getElementById('leave-to-date').value = targetDate;
+  }
+  window.openModal('leave-modal');
+}
+
+function showLeaveDetailModal(leave) {
+  const detailBody = document.getElementById('leave-detail-body');
+  detailBody.innerHTML = `
+    <div style="line-height: 1.6; font-size: 0.95rem;">
+      <p style="margin-bottom:8px;"><strong>Officer:</strong> ${leave.person}</p>
+      <p style="margin-bottom:8px;"><strong>Duration:</strong> ${leave.fromDate} to ${leave.toDate}</p>
+      <p style="margin-bottom:8px;"><strong>Reason / Remarks:</strong> ${leave.reason || 'Not specified'}</p>
+    </div>
+  `;
+  window.openModal('leave-detail-modal');
+}
+
+function populateOfficerSelects() {
+  const officers = window.hseStore.getOfficersByDept(currentActiveDept);
+  const officerLabel = DEPT_CONFIGS[currentActiveDept] ? DEPT_CONFIGS[currentActiveDept].officerLabel : 'Officers';
+
+  const leavePersonSelect = document.getElementById('leave-person-select');
+  const actPersonSelect = document.getElementById('act-person-dropdown');
+  const statusUpdateAuthor = document.getElementById('status-author-select');
+  const filterOfficerSelect = document.getElementById('filter-officer');
+  const rjPrimarySelect = document.getElementById('rj-primary-officer');
+  const rjSecondSelect = document.getElementById('rj-second-officer');
+  const rjFilterOfficerSelect = document.getElementById('rj-filter-officer');
+
+  if (leavePersonSelect) {
+    leavePersonSelect.innerHTML = `<option value="">-- Select ${officerLabel} --</option>${officers.map(m => `<option value="${m}">${m}</option>`).join('')}<option value="__NEW__">+ Add Custom Officer Name</option>`;
+  }
+  if (actPersonSelect) {
+    actPersonSelect.innerHTML = `<option value="">+ Add ${officerLabel}...</option>${officers.map(m => `<option value="${m}">${m}</option>`).join('')}`;
+  }
+  if (statusUpdateAuthor) {
+    statusUpdateAuthor.innerHTML = officers.map(m => `<option value="${m}">${m}</option>`).join('');
+  }
+  if (filterOfficerSelect) {
+    filterOfficerSelect.innerHTML = `<option value="ALL">All Officers</option>${officers.map(m => `<option value="${m}">${m}</option>`).join('')}`;
+  }
+  if (rjPrimarySelect) {
+    rjPrimarySelect.innerHTML = `<option value="">-- Select Responsible Officer --</option>${officers.map(m => `<option value="${m}">${m}</option>`).join('')}`;
+  }
+  if (rjSecondSelect) {
+    rjSecondSelect.innerHTML = `<option value="None">None</option>${officers.map(m => `<option value="${m}">${m}</option>`).join('')}`;
+  }
+  if (rjFilterOfficerSelect) {
+    rjFilterOfficerSelect.innerHTML = `<option value="ALL">All Officers</option>${officers.map(m => `<option value="${m}">${m}</option>`).join('')}`;
+  }
+}
+
+function initFilterControls() {
+  const filterInputs = ['filter-from-date', 'filter-to-date', 'filter-major', 'filter-priority', 'filter-officer', 'filter-status'];
+  filterInputs.forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener('change', () => renderActivitiesTable()); });
+  const resetBtn = document.getElementById('btn-reset-filters');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      document.getElementById('filter-from-date').value = '';
+      document.getElementById('filter-to-date').value = '';
+      document.getElementById('filter-major').value = 'ALL';
+      document.getElementById('filter-priority').value = 'ALL';
+      document.getElementById('filter-officer').value = 'ALL';
+      document.getElementById('filter-status').value = 'ALL';
+      renderActivitiesTable();
+    });
+  }
+}
+
+function initActivityForm() {
+  const actPersonSelect = document.getElementById('act-person-dropdown');
+  const actForm = document.getElementById('new-activity-form');
+  const addPersonBtn = document.getElementById('btn-add-custom-person');
+
+  const today = new Date().toISOString().split('T')[0];
+  const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+  document.getElementById('act-from-date').value = today;
+  document.getElementById('act-to-date').value = nextWeek;
+
+  if (actPersonSelect) {
+    actPersonSelect.addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (val && !selectedPersonsForNewActivity.includes(val)) {
+        selectedPersonsForNewActivity.push(val); renderPersonChips();
+      }
+      e.target.value = '';
+    });
+  }
+
+  if (addPersonBtn) {
+    addPersonBtn.addEventListener('click', () => {
+      const name = prompt(`Enter ${DEPT_CONFIGS[currentActiveDept].officerLabel} Name:`);
+      if (name && name.trim()) {
+        const trimmed = name.trim();
+        window.hseStore.addOfficerToDept(currentActiveDept, trimmed);
+        populateOfficerSelects();
+        if (!selectedPersonsForNewActivity.includes(trimmed)) { selectedPersonsForNewActivity.push(trimmed); renderPersonChips(); }
       }
     });
-  </script>
+  }
 
+  if (actForm) {
+    actForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const activityName = document.getElementById('act-name').value.trim();
+      const fromDate = document.getElementById('act-from-date').value;
+      const toDate = document.getElementById('act-to-date').value;
+      const isMajorActivity = document.getElementById('act-is-major').value;
+      const priority = document.getElementById('act-priority').value;
+
+      if (!activityName) { alert('Please enter Job Plan details.'); return; }
+      if (selectedPersonsForNewActivity.length === 0) { alert('Please select at least one Responsible Officer.'); return; }
+
+      window.hseStore.addActivity({
+        dept: currentActiveDept, activityName, fromDate, toDate, isMajorActivity, priority,
+        responsiblePersons: [...selectedPersonsForNewActivity], createdBy: selectedPersonsForNewActivity[0] || 'Officer'
+      });
+
+      actForm.reset();
+      document.getElementById('act-from-date').value = today; document.getElementById('act-to-date').value = nextWeek;
+      selectedPersonsForNewActivity = []; renderPersonChips(); renderActivitiesTable(); renderCalendar();
+    });
+  }
+}
+
+function renderPersonChips() {
+  const container = document.getElementById('act-person-chips');
+  if (!container) return;
+  container.innerHTML = '';
+  selectedPersonsForNewActivity.forEach((person, idx) => {
+    const chip = document.createElement('div'); chip.className = 'person-chip';
+    chip.innerHTML = `<span>${person}</span><span class="chip-remove">&times;</span>`;
+    chip.querySelector('.chip-remove').addEventListener('click', () => { selectedPersonsForNewActivity.splice(idx, 1); renderPersonChips(); });
+    container.appendChild(chip);
+  });
+}
+
+function renderActivitiesTable() {
+  const tbody = document.getElementById('activities-tbody');
+  if (!tbody) return;
+  let activities = window.hseStore.getActivities(currentActiveDept);
+  tbody.innerHTML = '';
+  if (activities.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 25px;">No job plans found.</td></tr>`;
+    return;
+  }
+  activities.forEach(act => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${act.slNo}</strong></td>
+      <td><strong>${act.activityName}</strong></td>
+      <td>${act.responsiblePersons.join(', ')}</td>
+      <td>${act.fromDate} ➔ ${act.toDate}</td>
+      <td>${act.isMajorActivity === 'Yes' ? '⭐ Yes' : 'No'}</td>
+      <td>${act.priority}</td>
+      <td><span class="status-badge ${act.status === 'Completed' ? 'status-completed' : 'status-pending'}">${act.status}</span></td>
+      <td><button class="btn-secondary delete-act-btn" data-id="${act.id}">🗑️</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function initRoutineJobForm() {
+  const rjForm = document.getElementById('new-routine-job-form');
+  if (rjForm) {
+    rjForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const jobName = document.getElementById('rj-name').value.trim();
+      const responsibleOfficer = document.getElementById('rj-primary-officer').value;
+      const secondLineOfficer = document.getElementById('rj-second-officer').value;
+      const nature = document.getElementById('rj-nature').value;
+
+      if (!jobName || !responsibleOfficer) { alert('Please fill required routine job fields.'); return; }
+      window.hseStore.addRoutineJob({ dept: currentActiveDept, jobName, responsibleOfficer, secondLineOfficer, nature });
+      rjForm.reset(); renderRoutineJobsTable();
+    });
+  }
+}
+
+function initRoutineFilterControls() {}
+
+function renderRoutineJobsTable() {
+  const tbody = document.getElementById('routine-jobs-tbody');
+  if (!tbody) return;
+  let jobs = window.hseStore.getRoutineJobs(currentActiveDept);
+  tbody.innerHTML = '';
+  if (jobs.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 25px;">No routine jobs found.</td></tr>`;
+    return;
+  }
+  jobs.forEach(job => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${job.slNo}</strong></td>
+      <td><strong>${job.jobName}</strong></td>
+      <td>👤 ${job.responsibleOfficer}</td>
+      <td>👤 ${job.secondLineOfficer}</td>
+      <td>🔄 ${job.nature}</td>
+      <td><button class="btn-secondary delete-rj-btn" data-id="${job.id}">🗑️</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function initOfficerReportControls() {}
+function renderOfficerWorkReportPrimary() {}
+function initSectionMasterReportControls() {}
+function renderSectionMasterReport() {}
+
+function renderOfficerRosterCards() {
+  const container = document.getElementById('officer-roster-container');
+  if (!container) return;
+  const allDepts = [
+    { key: 'safety', name: '1. Safety officers' }, { key: 'fire', name: '2. Fire officers' }, { key: 'ohc', name: '3. OHC Officers' },
+    { key: 'environment', name: '4. Environment Officers' }, { key: 'psm', name: '5. PSM Officers' },
+    { key: 'electrical', name: '6. Electrical Safety Officers' }, { key: 'contractor', name: '7. Contractor Safety Officers' }
+  ];
+  container.innerHTML = '';
+  allDepts.forEach(dept => {
+    const officers = window.hseStore.getOfficersByDept(dept.key);
+    const card = document.createElement('div'); card.className = 'officer-dept-card';
+    card.innerHTML = `
+      <div class="officer-card-header"><h4>${dept.name}</h4><span class="officer-count-badge">${officers.length} Officers</span></div>
+      <div class="officer-list">${officers.map(o => `<div class="officer-item"><span>👤 ${o}</span></div>`).join('')}</div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+// Data Export/Import Button handlers
+document.getElementById('btn-export-data').addEventListener('click', () => { if (window.hseStore) window.hseStore.exportDatabaseJSON(); });
+const fileInput = document.getElementById('import-file-input');
+document.getElementById('btn-import-data-trigger').addEventListener('click', () => { fileInput.click(); });
+fileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const jsonObj = JSON.parse(evt.target.result);
+        if (window.hseStore) window.hseStore.importDatabaseJSON(jsonObj);
+        alert('Successfully loaded data file into HSE Task Manager!');
+        location.reload();
+      } catch (err) { alert('Invalid JSON data file.'); }
+    };
+    reader.readAsText(file);
+  }
+});
+  </script>
 </body>
 </html>
