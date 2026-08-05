@@ -9,9 +9,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
   
-  <!-- External CSS Fallback -->
-  <link rel="stylesheet" href="css/styles.css">
-
   <!-- Embedded Full CSS for Guaranteed Standalone & GitHub Pages Rendering -->
   <style>
 /* HSE Task Manager - Embedded Main Stylesheet */
@@ -349,6 +346,7 @@ body {
   border: 1px solid #cbd5e1;
   flex: 1;
   height: 100%;
+  min-height: 420px;
 }
 
 .cal-header-day {
@@ -365,13 +363,14 @@ body {
 
 .cal-cell {
   background: #ffffff;
-  padding: 4px 6px;
+  padding: 6px;
   display: flex;
   flex-direction: column;
   transition: background 0.2s;
   position: relative;
   overflow: hidden;
   cursor: pointer;
+  min-height: 70px;
 }
 
 .cal-cell:hover {
@@ -637,20 +636,6 @@ body {
   border-radius: var(--radius-sm);
   border: 1px solid #e2e8f0;
   font-size: 0.85rem;
-}
-
-.btn-remove-officer {
-  background: none;
-  border: none;
-  color: var(--accent-red);
-  font-size: 1.1rem;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.add-officer-form {
-  display: flex;
-  gap: 6px;
 }
 
 .modal-backdrop {
@@ -924,17 +909,8 @@ body {
             </div>
           </div>
 
-          <div class="calendar-grid">
-            <div class="cal-header-day">Sun</div>
-            <div class="cal-header-day">Mon</div>
-            <div class="cal-header-day">Tue</div>
-            <div class="cal-header-day">Wed</div>
-            <div class="cal-header-day">Thu</div>
-            <div class="cal-header-day">Fri</div>
-            <div class="cal-header-day">Sat</div>
-            
-            <div id="calendar-grid-cells" style="display: contents;"></div>
-          </div>
+          <!-- Direct Grid Container -->
+          <div class="calendar-grid" id="calendar-grid-cells"></div>
         </div>
 
         <!-- PANEL 2: JOB PLANNING TRACKER -->
@@ -1397,22 +1373,16 @@ body {
     </div>
   </div>
 
-  <!-- EMBEDDED COMPLETE APPLICATION LOGIC (STORE, CONTROLLER, ROSTER, APP) -->
+  <!-- EMBEDDED COMPLETE FAIL-PROOF APPLICATION LOGIC -->
   <script>
 /* -------------------------------------------------------------
  * 1. HSE STORE DATA MODEL
  * ------------------------------------------------------------- */
-const CLOUD_CONFIG = {
-  ENABLED: false,
-  SUPABASE_URL: '',
-  SUPABASE_KEY: ''
-};
-
 const STORAGE_KEYS = {
-  OFFICERS_BY_DEPT: 'hse_dept_officers_main_v13',
-  LEAVES: 'hse_dept_leaves_main_v13',
-  ACTIVITIES: 'hse_dept_activities_main_v13',
-  ROUTINE_JOBS: 'hse_dept_routine_jobs_v13'
+  OFFICERS_BY_DEPT: 'hse_dept_officers_main_v14',
+  LEAVES: 'hse_dept_leaves_main_v14',
+  ACTIVITIES: 'hse_dept_activities_main_v14',
+  ROUTINE_JOBS: 'hse_dept_routine_jobs_v14'
 };
 
 const DEFAULT_DEPARTMENT_OFFICERS = {
@@ -1459,18 +1429,20 @@ class HSEStore {
   }
 
   init() {
-    if (!localStorage.getItem(STORAGE_KEYS.OFFICERS_BY_DEPT)) {
-      localStorage.setItem(STORAGE_KEYS.OFFICERS_BY_DEPT, JSON.stringify(DEFAULT_DEPARTMENT_OFFICERS));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.LEAVES)) {
-      localStorage.setItem(STORAGE_KEYS.LEAVES, JSON.stringify(DEFAULT_LEAVES));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.ACTIVITIES)) {
-      localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(DEFAULT_ACTIVITIES));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.ROUTINE_JOBS)) {
-      localStorage.setItem(STORAGE_KEYS.ROUTINE_JOBS, JSON.stringify(DEFAULT_ROUTINE_JOBS));
-    }
+    try {
+      if (!localStorage.getItem(STORAGE_KEYS.OFFICERS_BY_DEPT)) {
+        localStorage.setItem(STORAGE_KEYS.OFFICERS_BY_DEPT, JSON.stringify(DEFAULT_DEPARTMENT_OFFICERS));
+      }
+      if (!localStorage.getItem(STORAGE_KEYS.LEAVES)) {
+        localStorage.setItem(STORAGE_KEYS.LEAVES, JSON.stringify(DEFAULT_LEAVES));
+      }
+      if (!localStorage.getItem(STORAGE_KEYS.ACTIVITIES)) {
+        localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(DEFAULT_ACTIVITIES));
+      }
+      if (!localStorage.getItem(STORAGE_KEYS.ROUTINE_JOBS)) {
+        localStorage.setItem(STORAGE_KEYS.ROUTINE_JOBS, JSON.stringify(DEFAULT_ROUTINE_JOBS));
+      }
+    } catch(e) {}
   }
 
   exportDatabaseJSON() {
@@ -1499,7 +1471,9 @@ class HSEStore {
   }
 
   getAllDepartmentOfficers() {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.OFFICERS_BY_DEPT) || JSON.stringify(DEFAULT_DEPARTMENT_OFFICERS));
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEYS.OFFICERS_BY_DEPT) || JSON.stringify(DEFAULT_DEPARTMENT_OFFICERS));
+    } catch(e) { return DEFAULT_DEPARTMENT_OFFICERS; }
   }
 
   getOfficersByDept(deptKey) {
@@ -1528,13 +1502,15 @@ class HSEStore {
   }
 
   getLeaves(deptKey = null) {
-    const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.LEAVES) || '[]');
-    if (deptKey) return all.filter(l => l.dept === deptKey || (!l.dept && deptKey === 'safety'));
-    return all;
+    try {
+      const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.LEAVES) || '[]');
+      if (deptKey) return all.filter(l => l.dept === deptKey || (!l.dept && deptKey === 'safety'));
+      return all;
+    } catch(e) { return DEFAULT_LEAVES; }
   }
 
   addLeave(leaveData) {
-    const leaves = JSON.parse(localStorage.getItem(STORAGE_KEYS.LEAVES) || '[]');
+    const leaves = this.getLeaves();
     const newLeave = { id: 'l-' + Date.now(), ...leaveData };
     leaves.push(newLeave);
     localStorage.setItem(STORAGE_KEYS.LEAVES, JSON.stringify(leaves));
@@ -1542,7 +1518,7 @@ class HSEStore {
   }
 
   updateLeave(id, updatedData) {
-    const leaves = JSON.parse(localStorage.getItem(STORAGE_KEYS.LEAVES) || '[]');
+    const leaves = this.getLeaves();
     const idx = leaves.findIndex(l => l.id === id);
     if (idx !== -1) {
       leaves[idx] = { ...leaves[idx], ...updatedData };
@@ -1552,20 +1528,21 @@ class HSEStore {
   }
 
   removeLeave(id) {
-    let leaves = JSON.parse(localStorage.getItem(STORAGE_KEYS.LEAVES) || '[]');
-    leaves = leaves.filter(l => l.id !== id);
+    let leaves = this.getLeaves().filter(l => l.id !== id);
     localStorage.setItem(STORAGE_KEYS.LEAVES, JSON.stringify(leaves));
     return leaves;
   }
 
   getActivities(deptKey = null) {
-    const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVITIES) || '[]');
-    if (deptKey) return all.filter(a => a.dept === deptKey || (!a.dept && deptKey === 'safety'));
-    return all;
+    try {
+      const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVITIES) || '[]');
+      if (deptKey) return all.filter(a => a.dept === deptKey || (!a.dept && deptKey === 'safety'));
+      return all;
+    } catch(e) { return DEFAULT_ACTIVITIES; }
   }
 
   addActivity(activityData) {
-    const activities = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVITIES) || '[]');
+    const activities = this.getActivities();
     const deptActs = activityData.dept ? activities.filter(a => a.dept === activityData.dept) : activities;
     const nextSlNo = deptActs.length > 0 ? Math.max(...deptActs.map(a => a.slNo || 0)) + 1 : 1;
     
@@ -1591,7 +1568,7 @@ class HSEStore {
   }
 
   updateActivityMajorStatus(activityId, isMajor) {
-    const activities = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVITIES) || '[]');
+    const activities = this.getActivities();
     const activity = activities.find(a => a.id === activityId);
     if (activity) {
       activity.isMajorActivity = isMajor;
@@ -1601,7 +1578,7 @@ class HSEStore {
   }
 
   updateActivityPriority(activityId, newPriority) {
-    const activities = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVITIES) || '[]');
+    const activities = this.getActivities();
     const activity = activities.find(a => a.id === activityId);
     if (activity) {
       activity.priority = newPriority;
@@ -1611,7 +1588,7 @@ class HSEStore {
   }
 
   updateActivityStatus(activityId, newStatus, updateNote, updatedBy) {
-    const activities = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVITIES) || '[]');
+    const activities = this.getActivities();
     const activity = activities.find(a => a.id === activityId);
     if (activity) {
       const prevStatus = activity.status;
@@ -1631,7 +1608,7 @@ class HSEStore {
   }
 
   deleteActivity(activityId) {
-    let activities = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVITIES) || '[]');
+    let activities = this.getActivities();
     const target = activities.find(a => a.id === activityId);
     const deptKey = target ? target.dept : null;
     activities = activities.filter(a => a.id !== activityId);
@@ -1644,13 +1621,15 @@ class HSEStore {
   }
 
   getRoutineJobs(deptKey = null) {
-    const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.ROUTINE_JOBS) || '[]');
-    if (deptKey) return all.filter(j => j.dept === deptKey || (!j.dept && deptKey === 'safety'));
-    return all;
+    try {
+      const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.ROUTINE_JOBS) || '[]');
+      if (deptKey) return all.filter(j => j.dept === deptKey || (!j.dept && deptKey === 'safety'));
+      return all;
+    } catch(e) { return DEFAULT_ROUTINE_JOBS; }
   }
 
   addRoutineJob(jobData) {
-    const jobs = JSON.parse(localStorage.getItem(STORAGE_KEYS.ROUTINE_JOBS) || '[]');
+    const jobs = this.getRoutineJobs();
     const deptJobs = jobData.dept ? jobs.filter(j => j.dept === jobData.dept) : jobs;
     const nextSlNo = deptJobs.length > 0 ? Math.max(...deptJobs.map(j => j.slNo || 0)) + 1 : 1;
 
@@ -1673,7 +1652,7 @@ class HSEStore {
   }
 
   updateRoutineJobOfficers(jobId, primaryOfficer, secondLineOfficer) {
-    const jobs = JSON.parse(localStorage.getItem(STORAGE_KEYS.ROUTINE_JOBS) || '[]');
+    const jobs = this.getRoutineJobs();
     const job = jobs.find(j => j.id === jobId);
     if (job) {
       if (primaryOfficer) job.responsibleOfficer = primaryOfficer;
@@ -1684,7 +1663,7 @@ class HSEStore {
   }
 
   deleteRoutineJob(jobId) {
-    let jobs = JSON.parse(localStorage.getItem(STORAGE_KEYS.ROUTINE_JOBS) || '[]');
+    let jobs = this.getRoutineJobs();
     const target = jobs.find(j => j.id === jobId);
     const deptKey = target ? target.dept : null;
     jobs = jobs.filter(j => j.id !== jobId);
@@ -1727,19 +1706,22 @@ const DEPT_CONFIGS = {
   contractor: { title: 'Contractor Safety section', officerLabel: 'Contractor Safety Officers' }
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-  initDepartmentNavigation();
-  initSubTabs();
-  initCalendar();
-  initLeaveForm();
-  initActivityForm();
-  initRoutineJobForm();
-  initFilterControls();
-  initRoutineFilterControls();
-  initOfficerReportControls();
-  initSectionMasterReportControls();
-  renderDepartmentView();
-});
+function safeInitAll() {
+  try { initDepartmentNavigation(); } catch(e){}
+  try { initSubTabs(); } catch(e){}
+  try { initCalendar(); } catch(e){}
+  try { initLeaveForm(); } catch(e){}
+  try { initActivityForm(); } catch(e){}
+  try { initRoutineJobForm(); } catch(e){}
+  try { initFilterControls(); } catch(e){}
+  try { initRoutineFilterControls(); } catch(e){}
+  try { initOfficerReportControls(); } catch(e){}
+  try { initSectionMasterReportControls(); } catch(e){}
+  try { renderDepartmentView(); } catch(e){}
+}
+
+document.addEventListener('DOMContentLoaded', safeInitAll);
+window.onload = safeInitAll;
 
 function initDepartmentNavigation() {
   const deptTabBtns = document.querySelectorAll('.dept-tab-btn');
@@ -1851,7 +1833,16 @@ function renderCalendar() {
   const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
   const prevMonthTotalDays = new Date(year, month, 0).getDate();
 
-  calGrid.innerHTML = '';
+  // Re-inject Headers + Days into grid
+  calGrid.innerHTML = `
+    <div class="cal-header-day">Sun</div>
+    <div class="cal-header-day">Mon</div>
+    <div class="cal-header-day">Tue</div>
+    <div class="cal-header-day">Wed</div>
+    <div class="cal-header-day">Thu</div>
+    <div class="cal-header-day">Fri</div>
+    <div class="cal-header-day">Sat</div>
+  `;
 
   const leaves = window.hseStore.getLeaves(currentActiveDept);
   const activities = window.hseStore.getActivities(currentActiveDept);
@@ -1929,8 +1920,8 @@ function initLeaveForm() {
   if (leaveForm) {
     leaveForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      let person = memberSelect.value;
-      const customPersonInput = document.getElementById('leave-person-custom').value.trim();
+      let person = memberSelect ? memberSelect.value : '';
+      const customPersonInput = document.getElementById('leave-person-custom') ? document.getElementById('leave-person-custom').value.trim() : '';
       if (person === '__NEW__' && customPersonInput) {
         person = customPersonInput;
         window.hseStore.addOfficerToDept(currentActiveDept, person);
@@ -1940,9 +1931,9 @@ function initLeaveForm() {
       const leaveData = {
         dept: currentActiveDept,
         person: person,
-        fromDate: document.getElementById('leave-from-date').value,
-        toDate: document.getElementById('leave-to-date').value,
-        reason: document.getElementById('leave-reason').value
+        fromDate: document.getElementById('leave-from-date') ? document.getElementById('leave-from-date').value : '',
+        toDate: document.getElementById('leave-to-date') ? document.getElementById('leave-to-date').value : '',
+        reason: document.getElementById('leave-reason') ? document.getElementById('leave-reason').value : ''
       };
 
       if (!person || person === '__NEW__' || !leaveData.fromDate || !leaveData.toDate) {
@@ -1954,7 +1945,8 @@ function initLeaveForm() {
 
       window.closeModal('leave-modal');
       leaveForm.reset();
-      document.getElementById('custom-person-group').style.display = 'none';
+      const customGrp = document.getElementById('custom-person-group');
+      if (customGrp) customGrp.style.display = 'none';
       renderCalendar();
     });
   }
@@ -1962,8 +1954,10 @@ function initLeaveForm() {
   if (memberSelect) {
     memberSelect.addEventListener('change', (e) => {
       const customGrp = document.getElementById('custom-person-group');
-      if (e.target.value === '__NEW__') customGrp.style.display = 'block';
-      else customGrp.style.display = 'none';
+      if (customGrp) {
+        if (e.target.value === '__NEW__') customGrp.style.display = 'block';
+        else customGrp.style.display = 'none';
+      }
     });
   }
 }
@@ -1981,33 +1975,38 @@ function openLeaveModal(leaveToEdit = null, selectedDate = null) {
     const customInput = document.getElementById('leave-person-custom');
     const customGrp = document.getElementById('custom-person-group');
 
-    const exists = Array.from(memberSelect.options).some(opt => opt.value === leaveToEdit.person);
-    if (exists) { memberSelect.value = leaveToEdit.person; customGrp.style.display = 'none'; }
-    else { memberSelect.value = '__NEW__'; customGrp.style.display = 'block'; customInput.value = leaveToEdit.person; }
+    if (memberSelect) {
+      const exists = Array.from(memberSelect.options).some(opt => opt.value === leaveToEdit.person);
+      if (exists) { memberSelect.value = leaveToEdit.person; if (customGrp) customGrp.style.display = 'none'; }
+      else { memberSelect.value = '__NEW__'; if (customGrp) customGrp.style.display = 'block'; if (customInput) customInput.value = leaveToEdit.person; }
+    }
 
-    document.getElementById('leave-from-date').value = leaveToEdit.fromDate;
-    document.getElementById('leave-to-date').value = leaveToEdit.toDate;
-    document.getElementById('leave-reason').value = leaveToEdit.reason || '';
+    if (document.getElementById('leave-from-date')) document.getElementById('leave-from-date').value = leaveToEdit.fromDate;
+    if (document.getElementById('leave-to-date')) document.getElementById('leave-to-date').value = leaveToEdit.toDate;
+    if (document.getElementById('leave-reason')) document.getElementById('leave-reason').value = leaveToEdit.reason || '';
   } else {
     editingLeaveId = null;
     if (modalTitle) modalTitle.textContent = `Add Leave Plan (${DEPT_CONFIGS[currentActiveDept].officerLabel})`;
-    document.getElementById('custom-person-group').style.display = 'none';
+    const customGrp = document.getElementById('custom-person-group');
+    if (customGrp) customGrp.style.display = 'none';
     const targetDate = selectedDate || new Date().toISOString().split('T')[0];
-    document.getElementById('leave-from-date').value = targetDate;
-    document.getElementById('leave-to-date').value = targetDate;
+    if (document.getElementById('leave-from-date')) document.getElementById('leave-from-date').value = targetDate;
+    if (document.getElementById('leave-to-date')) document.getElementById('leave-to-date').value = targetDate;
   }
   window.openModal('leave-modal');
 }
 
 function showLeaveDetailModal(leave) {
   const detailBody = document.getElementById('leave-detail-body');
-  detailBody.innerHTML = `
-    <div style="line-height: 1.6; font-size: 0.95rem;">
-      <p style="margin-bottom:8px;"><strong>Officer:</strong> ${leave.person}</p>
-      <p style="margin-bottom:8px;"><strong>Duration:</strong> ${leave.fromDate} to ${leave.toDate}</p>
-      <p style="margin-bottom:8px;"><strong>Reason / Remarks:</strong> ${leave.reason || 'Not specified'}</p>
-    </div>
-  `;
+  if (detailBody) {
+    detailBody.innerHTML = `
+      <div style="line-height: 1.6; font-size: 0.95rem;">
+        <p style="margin-bottom:8px;"><strong>Officer:</strong> ${leave.person}</p>
+        <p style="margin-bottom:8px;"><strong>Duration:</strong> ${leave.fromDate} to ${leave.toDate}</p>
+        <p style="margin-bottom:8px;"><strong>Reason / Remarks:</strong> ${leave.reason || 'Not specified'}</p>
+      </div>
+    `;
+  }
   window.openModal('leave-detail-modal');
 }
 
@@ -2052,12 +2051,12 @@ function initFilterControls() {
   const resetBtn = document.getElementById('btn-reset-filters');
   if (resetBtn) {
     resetBtn.addEventListener('click', () => {
-      document.getElementById('filter-from-date').value = '';
-      document.getElementById('filter-to-date').value = '';
-      document.getElementById('filter-major').value = 'ALL';
-      document.getElementById('filter-priority').value = 'ALL';
-      document.getElementById('filter-officer').value = 'ALL';
-      document.getElementById('filter-status').value = 'ALL';
+      if (document.getElementById('filter-from-date')) document.getElementById('filter-from-date').value = '';
+      if (document.getElementById('filter-to-date')) document.getElementById('filter-to-date').value = '';
+      if (document.getElementById('filter-major')) document.getElementById('filter-major').value = 'ALL';
+      if (document.getElementById('filter-priority')) document.getElementById('filter-priority').value = 'ALL';
+      if (document.getElementById('filter-officer')) document.getElementById('filter-officer').value = 'ALL';
+      if (document.getElementById('filter-status')) document.getElementById('filter-status').value = 'ALL';
       renderActivitiesTable();
     });
   }
@@ -2070,8 +2069,8 @@ function initActivityForm() {
 
   const today = new Date().toISOString().split('T')[0];
   const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
-  document.getElementById('act-from-date').value = today;
-  document.getElementById('act-to-date').value = nextWeek;
+  if (document.getElementById('act-from-date')) document.getElementById('act-from-date').value = today;
+  if (document.getElementById('act-to-date')) document.getElementById('act-to-date').value = nextWeek;
 
   if (actPersonSelect) {
     actPersonSelect.addEventListener('change', (e) => {
@@ -2098,11 +2097,11 @@ function initActivityForm() {
   if (actForm) {
     actForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      const activityName = document.getElementById('act-name').value.trim();
-      const fromDate = document.getElementById('act-from-date').value;
-      const toDate = document.getElementById('act-to-date').value;
-      const isMajorActivity = document.getElementById('act-is-major').value;
-      const priority = document.getElementById('act-priority').value;
+      const activityName = document.getElementById('act-name') ? document.getElementById('act-name').value.trim() : '';
+      const fromDate = document.getElementById('act-from-date') ? document.getElementById('act-from-date').value : '';
+      const toDate = document.getElementById('act-to-date') ? document.getElementById('act-to-date').value : '';
+      const isMajorActivity = document.getElementById('act-is-major') ? document.getElementById('act-is-major').value : 'No';
+      const priority = document.getElementById('act-priority') ? document.getElementById('act-priority').value : 'Medium';
 
       if (!activityName) { alert('Please enter Job Plan details.'); return; }
       if (selectedPersonsForNewActivity.length === 0) { alert('Please select at least one Responsible Officer.'); return; }
@@ -2113,7 +2112,8 @@ function initActivityForm() {
       });
 
       actForm.reset();
-      document.getElementById('act-from-date').value = today; document.getElementById('act-to-date').value = nextWeek;
+      if (document.getElementById('act-from-date')) document.getElementById('act-from-date').value = today;
+      if (document.getElementById('act-to-date')) document.getElementById('act-to-date').value = nextWeek;
       selectedPersonsForNewActivity = []; renderPersonChips(); renderActivitiesTable(); renderCalendar();
     });
   }
@@ -2137,7 +2137,7 @@ function renderActivitiesTable() {
   let activities = window.hseStore.getActivities(currentActiveDept);
   tbody.innerHTML = '';
   if (activities.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 25px;">No job plans found.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 25px;">No job plans found for this section.</td></tr>`;
     return;
   }
   activities.forEach(act => {
@@ -2161,10 +2161,10 @@ function initRoutineJobForm() {
   if (rjForm) {
     rjForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      const jobName = document.getElementById('rj-name').value.trim();
-      const responsibleOfficer = document.getElementById('rj-primary-officer').value;
-      const secondLineOfficer = document.getElementById('rj-second-officer').value;
-      const nature = document.getElementById('rj-nature').value;
+      const jobName = document.getElementById('rj-name') ? document.getElementById('rj-name').value.trim() : '';
+      const responsibleOfficer = document.getElementById('rj-primary-officer') ? document.getElementById('rj-primary-officer').value : '';
+      const secondLineOfficer = document.getElementById('rj-second-officer') ? document.getElementById('rj-second-officer').value : '';
+      const nature = document.getElementById('rj-nature') ? document.getElementById('rj-nature').value : 'Daily';
 
       if (!jobName || !responsibleOfficer) { alert('Please fill required routine job fields.'); return; }
       window.hseStore.addRoutineJob({ dept: currentActiveDept, jobName, responsibleOfficer, secondLineOfficer, nature });
@@ -2181,7 +2181,7 @@ function renderRoutineJobsTable() {
   let jobs = window.hseStore.getRoutineJobs(currentActiveDept);
   tbody.innerHTML = '';
   if (jobs.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 25px;">No routine jobs found.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 25px;">No routine jobs found for this section.</td></tr>`;
     return;
   }
   jobs.forEach(job => {
@@ -2285,24 +2285,28 @@ function renderOfficerRosterCards() {
 }
 
 // Data Export/Import Button handlers
-document.getElementById('btn-export-data').addEventListener('click', () => { if (window.hseStore) window.hseStore.exportDatabaseJSON(); });
+const expBtn = document.getElementById('btn-export-data');
+if (expBtn) expBtn.addEventListener('click', () => { if (window.hseStore) window.hseStore.exportDatabaseJSON(); });
 const fileInput = document.getElementById('import-file-input');
-document.getElementById('btn-import-data-trigger').addEventListener('click', () => { fileInput.click(); });
-fileInput.addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const jsonObj = JSON.parse(evt.target.result);
-        if (window.hseStore) window.hseStore.importDatabaseJSON(jsonObj);
-        alert('Successfully loaded data file into HSE Task Manager!');
-        location.reload();
-      } catch (err) { alert('Invalid JSON data file.'); }
-    };
-    reader.readAsText(file);
-  }
-});
+const impBtn = document.getElementById('btn-import-data-trigger');
+if (impBtn && fileInput) impBtn.addEventListener('click', () => { fileInput.click(); });
+if (fileInput) {
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          const jsonObj = JSON.parse(evt.target.result);
+          if (window.hseStore) window.hseStore.importDatabaseJSON(jsonObj);
+          alert('Successfully loaded data file into HSE Task Manager!');
+          location.reload();
+        } catch (err) { alert('Invalid JSON data file.'); }
+      };
+      reader.readAsText(file);
+    }
+  });
+}
   </script>
 </body>
 </html>
