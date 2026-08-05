@@ -12,7 +12,7 @@
   <!-- External CSS Fallback -->
   <link rel="stylesheet" href="css/styles.css">
 
-  <!-- Embedded Full CSS for Guaranteed GitHub Pages & Standalone Rendering -->
+  <!-- Embedded Full CSS for Guaranteed Standalone & GitHub Pages Rendering -->
   <style>
 /* HSE Task Manager - Embedded Main Stylesheet */
 :root {
@@ -1409,10 +1409,10 @@ const CLOUD_CONFIG = {
 };
 
 const STORAGE_KEYS = {
-  OFFICERS_BY_DEPT: 'hse_dept_officers_main_v12',
-  LEAVES: 'hse_dept_leaves_main_v12',
-  ACTIVITIES: 'hse_dept_activities_main_v12',
-  ROUTINE_JOBS: 'hse_dept_routine_jobs_v12'
+  OFFICERS_BY_DEPT: 'hse_dept_officers_main_v13',
+  LEAVES: 'hse_dept_leaves_main_v13',
+  ACTIVITIES: 'hse_dept_activities_main_v13',
+  ROUTINE_JOBS: 'hse_dept_routine_jobs_v13'
 };
 
 const DEFAULT_DEPARTMENT_OFFICERS = {
@@ -1456,11 +1456,6 @@ const DEFAULT_ROUTINE_JOBS = [
 class HSEStore {
   constructor() {
     this.init();
-    if (CLOUD_CONFIG.ENABLED && CLOUD_CONFIG.SUPABASE_URL) {
-      this.tryLoadFromCloud();
-    } else {
-      this.tryLoadFromCentralServer();
-    }
   }
 
   init() {
@@ -1475,59 +1470,6 @@ class HSEStore {
     }
     if (!localStorage.getItem(STORAGE_KEYS.ROUTINE_JOBS)) {
       localStorage.setItem(STORAGE_KEYS.ROUTINE_JOBS, JSON.stringify(DEFAULT_ROUTINE_JOBS));
-    }
-  }
-
-  async tryLoadFromCloud() {
-    try {
-      const resp = await fetch(`${CLOUD_CONFIG.SUPABASE_URL}/rest/v1/hse_store?select=*`, {
-        headers: { 'apikey': CLOUD_CONFIG.SUPABASE_KEY, 'Authorization': `Bearer ${CLOUD_CONFIG.SUPABASE_KEY}` }
-      });
-      if (resp.ok) {
-        const rows = await resp.json();
-        if (rows && rows.length > 0 && rows[0].data) {
-          this.importDatabaseJSON(rows[0].data, false);
-        }
-      }
-    } catch (e) {}
-  }
-
-  async tryLoadFromCentralServer() {
-    try {
-      const resp = await fetch('/api/database');
-      if (resp.ok) {
-        const fileData = await resp.json();
-        if (fileData && fileData.officersByDept) {
-          this.importDatabaseJSON(fileData, false);
-        }
-      }
-    } catch (e) {}
-  }
-
-  async saveToCentralServer() {
-    const fullData = {
-      officersByDept: this.getAllDepartmentOfficers(),
-      leaves: this.getLeaves(),
-      activities: this.getActivities(),
-      routineJobs: this.getRoutineJobs()
-    };
-
-    if (CLOUD_CONFIG.ENABLED && CLOUD_CONFIG.SUPABASE_URL) {
-      try {
-        await fetch(`${CLOUD_CONFIG.SUPABASE_URL}/rest/v1/hse_store`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'apikey': CLOUD_CONFIG.SUPABASE_KEY, 'Authorization': `Bearer ${CLOUD_CONFIG.SUPABASE_KEY}`, 'Prefer': 'resolution=merge-duplicates' },
-          body: JSON.stringify({ id: 1, data: fullData })
-        });
-      } catch (e) {}
-    } else {
-      try {
-        await fetch('/api/database', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(fullData)
-        });
-      } catch (e) {}
     }
   }
 
@@ -1549,12 +1491,11 @@ class HSEStore {
     URL.revokeObjectURL(url);
   }
 
-  importDatabaseJSON(jsonObj, syncServer = true) {
+  importDatabaseJSON(jsonObj) {
     if (jsonObj.officersByDept) localStorage.setItem(STORAGE_KEYS.OFFICERS_BY_DEPT, JSON.stringify(jsonObj.officersByDept));
     if (jsonObj.leaves) localStorage.setItem(STORAGE_KEYS.LEAVES, JSON.stringify(jsonObj.leaves));
     if (jsonObj.activities) localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(jsonObj.activities));
     if (jsonObj.routineJobs) localStorage.setItem(STORAGE_KEYS.ROUTINE_JOBS, JSON.stringify(jsonObj.routineJobs));
-    if (syncServer) this.saveToCentralServer();
   }
 
   getAllDepartmentOfficers() {
@@ -1573,7 +1514,6 @@ class HSEStore {
     if (trimmed && !all[deptKey].includes(trimmed)) {
       all[deptKey].push(trimmed);
       localStorage.setItem(STORAGE_KEYS.OFFICERS_BY_DEPT, JSON.stringify(all));
-      this.saveToCentralServer();
     }
     return all[deptKey];
   }
@@ -1583,7 +1523,6 @@ class HSEStore {
     if (all[deptKey]) {
       all[deptKey] = all[deptKey].filter(n => n !== name);
       localStorage.setItem(STORAGE_KEYS.OFFICERS_BY_DEPT, JSON.stringify(all));
-      this.saveToCentralServer();
     }
     return all[deptKey];
   }
@@ -1599,7 +1538,6 @@ class HSEStore {
     const newLeave = { id: 'l-' + Date.now(), ...leaveData };
     leaves.push(newLeave);
     localStorage.setItem(STORAGE_KEYS.LEAVES, JSON.stringify(leaves));
-    this.saveToCentralServer();
     return newLeave;
   }
 
@@ -1609,7 +1547,6 @@ class HSEStore {
     if (idx !== -1) {
       leaves[idx] = { ...leaves[idx], ...updatedData };
       localStorage.setItem(STORAGE_KEYS.LEAVES, JSON.stringify(leaves));
-      this.saveToCentralServer();
     }
     return leaves;
   }
@@ -1618,7 +1555,6 @@ class HSEStore {
     let leaves = JSON.parse(localStorage.getItem(STORAGE_KEYS.LEAVES) || '[]');
     leaves = leaves.filter(l => l.id !== id);
     localStorage.setItem(STORAGE_KEYS.LEAVES, JSON.stringify(leaves));
-    this.saveToCentralServer();
     return leaves;
   }
 
@@ -1651,7 +1587,6 @@ class HSEStore {
 
     activities.push(newActivity);
     localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(activities));
-    this.saveToCentralServer();
     return newActivity;
   }
 
@@ -1661,7 +1596,6 @@ class HSEStore {
     if (activity) {
       activity.isMajorActivity = isMajor;
       localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(activities));
-      this.saveToCentralServer();
     }
     return activities;
   }
@@ -1672,7 +1606,6 @@ class HSEStore {
     if (activity) {
       activity.priority = newPriority;
       localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(activities));
-      this.saveToCentralServer();
     }
     return activities;
   }
@@ -1680,7 +1613,6 @@ class HSEStore {
   updateActivityStatus(activityId, newStatus, updateNote, updatedBy) {
     const activities = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVITIES) || '[]');
     const activity = activities.find(a => a.id === activityId);
-    
     if (activity) {
       const prevStatus = activity.status;
       activity.status = newStatus;
@@ -1694,7 +1626,6 @@ class HSEStore {
         note: updateNote || 'Status updated.'
       });
       localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(activities));
-      this.saveToCentralServer();
     }
     return activities;
   }
@@ -1709,7 +1640,6 @@ class HSEStore {
       deptActs.forEach((act, idx) => { act.slNo = idx + 1; });
     }
     localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(activities));
-    this.saveToCentralServer();
     return activities;
   }
 
@@ -1739,7 +1669,6 @@ class HSEStore {
 
     jobs.push(newJob);
     localStorage.setItem(STORAGE_KEYS.ROUTINE_JOBS, JSON.stringify(jobs));
-    this.saveToCentralServer();
     return newJob;
   }
 
@@ -1750,7 +1679,6 @@ class HSEStore {
       if (primaryOfficer) job.responsibleOfficer = primaryOfficer;
       if (secondLineOfficer) job.secondLineOfficer = secondLineOfficer;
       localStorage.setItem(STORAGE_KEYS.ROUTINE_JOBS, JSON.stringify(jobs));
-      this.saveToCentralServer();
     }
     return jobs;
   }
@@ -1765,7 +1693,6 @@ class HSEStore {
       deptJobs.forEach((j, idx) => { j.slNo = idx + 1; });
     }
     localStorage.setItem(STORAGE_KEYS.ROUTINE_JOBS, JSON.stringify(jobs));
-    this.saveToCentralServer();
     return jobs;
   }
 }
@@ -1773,7 +1700,7 @@ class HSEStore {
 window.hseStore = new HSEStore();
 
 /* -------------------------------------------------------------
- * 2. DEPARTMENT CONTROLLER LOGIC
+ * 2. FULL CONTROLLER & UI RENDERER
  * ------------------------------------------------------------- */
 window.openModal = function(modalId) {
   const modal = document.getElementById(modalId);
@@ -2271,10 +2198,71 @@ function renderRoutineJobsTable() {
   });
 }
 
-function initOfficerReportControls() {}
-function renderOfficerWorkReportPrimary() {}
-function initSectionMasterReportControls() {}
-function renderSectionMasterReport() {}
+function initOfficerReportControls() {
+  const select = document.getElementById('primary-report-officer-select');
+  if (select) {
+    select.addEventListener('change', () => { renderOfficerWorkReportPrimary(); });
+  }
+}
+
+function renderOfficerWorkReportPrimary() {
+  const select = document.getElementById('primary-report-officer-select');
+  const container = document.getElementById('primary-officer-report-content');
+  if (!select || !container) return;
+
+  const allOfficersMap = window.hseStore.getAllDepartmentOfficers();
+  let htmlOptions = '';
+  Object.keys(DEPT_CONFIGS).forEach(deptKey => {
+    const list = allOfficersMap[deptKey] || [];
+    if (list.length > 0) {
+      htmlOptions += `<optgroup label="${DEPT_CONFIGS[deptKey].title}">`;
+      list.forEach(off => { htmlOptions += `<option value="${off}">👤 ${off}</option>`; });
+      htmlOptions += `</optgroup>`;
+    }
+  });
+
+  select.innerHTML = htmlOptions;
+  let selectedOfficer = select.value || (select.options[0] ? select.options[0].value : '');
+
+  if (!selectedOfficer) { container.innerHTML = '<p style="color:var(--text-muted)">No officers found.</p>'; return; }
+
+  const allActivities = window.hseStore.getActivities();
+  const allRoutineJobs = window.hseStore.getRoutineJobs();
+  const assignedActivities = allActivities.filter(a => a.responsiblePersons && a.responsiblePersons.includes(selectedOfficer));
+  const assignedRoutineJobs = allRoutineJobs.filter(j => j.responsibleOfficer === selectedOfficer || j.secondLineOfficer === selectedOfficer);
+
+  container.innerHTML = `
+    <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:20px;">
+      <h3 style="margin-bottom:15px; color:var(--primary-dark);">👤 Work Report for ${selectedOfficer}</h3>
+      <p style="margin-bottom:10px;"><strong>Planned Jobs:</strong> ${assignedActivities.length} | <strong>Routine Jobs:</strong> ${assignedRoutineJobs.length}</p>
+    </div>
+  `;
+}
+
+function initSectionMasterReportControls() {
+  const select = document.getElementById('master-dept-select');
+  if (select) {
+    select.addEventListener('change', () => { renderSectionMasterReport(); });
+  }
+}
+
+function renderSectionMasterReport() {
+  const select = document.getElementById('master-dept-select');
+  const container = document.getElementById('master-report-content');
+  if (!select || !container) return;
+  const targetDept = select.value || 'ALL';
+
+  const allActivities = window.hseStore.getActivities();
+  const allRoutineJobs = window.hseStore.getRoutineJobs();
+  const allLeaves = window.hseStore.getLeaves();
+
+  container.innerHTML = `
+    <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:20px;">
+      <h3 style="margin-bottom:15px; color:var(--primary-dark);">📋 Section Master Summary</h3>
+      <p style="margin-bottom:10px;">Total Planned Jobs: ${allActivities.length} | Total Routine Jobs: ${allRoutineJobs.length} | Active Leaves: ${allLeaves.length}</p>
+    </div>
+  `;
+}
 
 function renderOfficerRosterCards() {
   const container = document.getElementById('officer-roster-container');
