@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HSE Task Manager - BPCL</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- External CSS Fallback -->
+  <link rel="stylesheet" href="css/styles.css">
+
+  <!-- Embedded Full CSS for Guaranteed GitHub Pages & Standalone Rendering -->
+  <style>
+/* HSE Task Manager - Embedded Main Stylesheet */
+:root {
+  --primary-color: #005a9c;
+  --primary-dark: #003d6b;
+  --primary-light: #e6f0fa;
+  --accent-yellow: #ffc107;
+  --accent-green: #10b981;
+  --accent-red: #ef4444;
+  --accent-orange: #f97316;
+  --text-dark: #1e293b;
+  --text-muted: #64748b;
+  --text-light: #f8fafc;
+  --bg-overlay: rgba(255, 255, 255, 0.95);
+  --bg-card: #ffffff;
+  --border-color: #e2e8f0;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.18);
+  --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.25);
+  --font-heading: 'Outfit', sans-serif;
+  --font-body: 'Inter', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--text-dark);
+  height: 100vh;
+  overflow: hidden;
+  background-image: url('bpcl_home_page.jpg'), url('BPCL Home page.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  background: rgba(0, 45, 90, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #ffffff;
+  padding: 8px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid rgba(255, 193, 7, 0.6);
+  box-shadow: var(--shadow-md);
+  flex-shrink: 0;
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-title-group h1 {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: #ffffff;
+  margin-bottom: 0;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.header-subtitle {
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.header-logo-container {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 4px 10px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255,255,255,0.4);
+}
+
+.header-logo {
+  height: 42px;
+  width: auto;
+  object-fit: contain;
+}
+
+.dept-nav-wrapper {
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 0 24px;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.dept-nav {
+  display: flex;
+  gap: 6px;
+  list-style: none;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.dept-tab-btn {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #cbd5e1;
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 10px 16px;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dept-tab-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dept-tab-btn.active {
+  color: #ffffff;
+  border-bottom-color: var(--accent-yellow);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.dept-tab-btn.tab-roster {
+  margin-left: auto;
+  background: rgba(255, 193, 7, 0.15);
+  color: var(--accent-yellow);
+}
+
+.main-container {
+  flex: 1;
+  padding: 16px 24px;
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.white-overlay-card {
+  background: var(--bg-overlay);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: var(--shadow-xl);
+  padding: 18px 22px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.module-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1.5px solid var(--border-color);
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+  flex-shrink: 0;
+}
+
+.module-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.module-title-group h2 {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  color: var(--primary-dark);
+  font-weight: 700;
+}
+
+.sub-nav-icons {
+  display: flex;
+  gap: 10px;
+}
+
+.sub-icon-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  background: #f1f5f9;
+  border: 1.5px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--text-dark);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sub-icon-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+  color: var(--text-muted);
+}
+
+.sub-icon-btn.active {
+  background: var(--primary-color);
+  border-color: var(--primary-dark);
+  color: #ffffff;
+  box-shadow: var(--shadow-sm);
+}
+
+.sub-icon-btn.active svg {
+  color: var(--accent-yellow);
+}
+
+.dept-view-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.view-panel {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.view-panel.active {
+  display: flex;
+}
+
+.calendar-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  background: #f8fafc;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.cal-month-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cal-month-nav h3 {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--primary-dark);
+  min-width: 160px;
+  text-align: center;
+}
+
+.btn-icon {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-primary {
+  background: var(--primary-color);
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+}
+
+.btn-secondary {
+  background: #e2e8f0;
+  color: var(--text-dark);
+  border: none;
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: auto repeat(5, 1fr);
+  gap: 1px;
+  background: #cbd5e1;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  flex: 1;
+  height: 100%;
+}
+
+.cal-header-day {
+  background: var(--primary-dark);
+  color: #ffffff;
+  padding: 8px;
+  text-align: center;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.cal-cell {
+  background: #ffffff;
+  padding: 4px 6px;
+  display: flex;
+  flex-direction: column;
+  transition: background 0.2s;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.cal-cell:hover {
+  background: #f8fafc;
+}
+
+.cal-cell.other-month {
+  background: #f1f5f9;
+  color: #94a3b8;
+}
+
+.cal-cell.today {
+  background: #eff6ff;
+}
+
+.cal-cell.today .date-num {
+  background: var(--primary-color);
+  color: #ffffff;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.date-num {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 2px;
+  color: #475569;
+}
+
+.cal-cell-events {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.leave-badge {
+  font-size: 0.72rem;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  display: block;
+  max-width: 100%;
+  box-shadow: var(--shadow-sm);
+  line-height: 1.2;
+}
+
+.leave-casual { background: #dbeafe; color: #1e40af; border-left: 3px solid #2563eb; }
+.leave-earned { background: #dcfce7; color: #166534; border-left: 3px solid #16a34a; }
+.leave-sick { background: #fee2e2; color: #991b1b; border-left: 3px solid #dc2626; }
+.leave-onduty { background: #fef3c7; color: #92400e; border-left: 3px solid #d97706; }
+
+.activity-form-card {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+
+.activity-form-title {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--primary-dark);
+  margin-bottom: 10px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 2fr auto;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-group label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.form-input, .form-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  background: #ffffff;
+  outline: none;
+}
+
+.person-tag-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  min-height: 36px;
+  align-items: center;
+}
+
+.person-chip {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chip-remove {
+  cursor: pointer;
+  color: var(--accent-red);
+  font-weight: bold;
+}
+
+.chip-input-select {
+  border: none;
+  outline: none;
+  flex: 1;
+  min-width: 100px;
+  font-size: 0.82rem;
+}
+
+.activities-table-wrapper {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  overflow-y: auto;
+  flex: 1;
+}
+
+.activities-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.activities-table th {
+  background: #f1f5f9;
+  color: var(--primary-dark);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 10px 14px;
+  border-bottom: 2px solid var(--border-color);
+  text-transform: uppercase;
+  position: sticky;
+  top: 0;
+}
+
+.activities-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.85rem;
+  vertical-align: middle;
+}
+
+.activities-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 16px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.status-pending { background: #fef3c7; color: #b45309; }
+.status-completed { background: #dcfce7; color: #15803d; }
+
+.status-log-btn {
+  background: transparent;
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.officer-roster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  overflow-y: auto;
+  padding-right: 4px;
+  flex: 1;
+}
+
+.officer-dept-card {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.officer-card-header h4 {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  color: var(--primary-dark);
+  font-weight: 700;
+}
+
+.officer-count-badge {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.officer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.officer-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid #e2e8f0;
+  font-size: 0.85rem;
+}
+
+.btn-remove-officer {
+  background: none;
+  border: none;
+  color: var(--accent-red);
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.add-officer-form {
+  display: flex;
+  gap: 6px;
+}
+
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(6px);
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-backdrop.active {
+  display: flex;
+}
+
+.modal-content {
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  width: 100%;
+  max-width: 550px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  color: var(--primary-dark);
+  font-weight: 700;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  font-size: 1.4rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.modal-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background: #f8fafc;
+  border-bottom-left-radius: var(--radius-lg);
+  border-bottom-right-radius: var(--radius-lg);
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  padding-left: 16px;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: #cbd5e1;
+}
+
+.timeline-item {
+  position: relative;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -16px;
+  top: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary-color);
+}
+
+.timeline-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.timeline-content {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 90, 156, 0.3);
+  border-radius: 4px;
+}
+  </style>
+</head>
+<body>
+
+  <!-- APP HEADER -->
+  <header class="app-header">
+    <div class="header-brand">
+      <div class="header-title-group">
+        <h1>HSE task manager</h1>
+        <div class="header-subtitle">Health, Safety & Environment Department</div>
+      </div>
+    </div>
+
+    <!-- Data Backup & Folder File Sync Buttons -->
+    <div style="display:flex; align-items:center; gap:8px; margin-left:auto; margin-right:20px;">
+      <button id="btn-export-data" class="btn-secondary" style="padding:6px 12px; font-size:0.8rem; background:rgba(255,255,255,0.15); color:#ffffff; border:1px solid rgba(255,255,255,0.3);" title="Save/Export data to project folder file">
+        💾 Save Data File
+      </button>
+      <button id="btn-import-data-trigger" class="btn-secondary" style="padding:6px 12px; font-size:0.8rem; background:rgba(255,255,255,0.15); color:#ffffff; border:1px solid rgba(255,255,255,0.3);" title="Load data from project folder file">
+        📂 Load Data File
+      </button>
+      <input type="file" id="import-file-input" accept=".json" style="display:none;">
+    </div>
+
+    <!-- BPCL Logo on Right Top Corner -->
+    <div class="header-logo-container">
+      <img src="bpcl_logo.jpg" alt="Bharat Petroleum Logo" class="header-logo">
+    </div>
+  </header>
+
+  <!-- PRIMARY NAVIGATION TABS (7 DEPARTMENTS + SECTION MASTER REPORT + OFFICER WORK REPORT + ROSTER) -->
+  <nav class="dept-nav-wrapper">
+    <ul class="dept-nav">
+      <li>
+        <button class="dept-tab-btn active" data-dept="safety">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          1. Safety
+        </button>
+      </li>
+      <li>
+        <button class="dept-tab-btn" data-dept="fire">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 3z"/></svg>
+          2. Fire
+        </button>
+      </li>
+      <li>
+        <button class="dept-tab-btn" data-dept="ohc">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          3. OHC
+        </button>
+      </li>
+      <li>
+        <button class="dept-tab-btn" data-dept="environment">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+          4. Environment
+        </button>
+      </li>
+      <li>
+        <button class="dept-tab-btn" data-dept="psm">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          5. PSM
+        </button>
+      </li>
+      <li>
+        <button class="dept-tab-btn" data-dept="electrical">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          6. Electrical safety
+        </button>
+      </li>
+      <li>
+        <button class="dept-tab-btn" data-dept="contractor">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          7. Contractor safety
+        </button>
+      </li>
+
+      <!-- PRIMARY HEAD REPORT TABS -->
+      <li>
+        <button class="dept-tab-btn" data-dept="master-report" style="background:rgba(255,255,255,0.18);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          📋 Section Master Report
+        </button>
+      </li>
+      <li>
+        <button class="dept-tab-btn" data-dept="officer-report" style="background:rgba(255,255,255,0.18);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          👤 Officer Work Report
+        </button>
+      </li>
+      <li>
+        <button class="dept-tab-btn tab-roster" data-dept="roster">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          ⚙️ Officer Management
+        </button>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- MAIN STAGE CONTAINER -->
+  <main class="main-container">
+
+    <!-- DYNAMIC DEPARTMENT VIEW STAGE -->
+    <div id="dept-view-stage" class="dept-view-panel active">
+      <div class="white-overlay-card">
+        
+        <!-- Module Header with Sub-Tabs -->
+        <div class="module-header">
+          <div class="module-title-group">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <h2 id="dept-hub-title">Safety section</h2>
+          </div>
+
+          <!-- Sub-Tab Icons with Names -->
+          <div class="sub-nav-icons">
+            <button class="sub-icon-btn active" data-target="leave-plans-view">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              1. Leave plan and major jobs
+            </button>
+            <button class="sub-icon-btn" data-target="activities-view">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
+              2. Job planning
+            </button>
+            <button class="sub-icon-btn" data-target="routine-jobs-view">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              3. Routine jobs
+            </button>
+          </div>
+        </div>
+
+        <!-- PANEL 1: LEAVE PLAN AND MAJOR JOBS CALENDAR -->
+        <div id="leave-plans-view" class="view-panel safety-panel active">
+          <div class="calendar-controls">
+            <div class="cal-month-nav">
+              <button id="cal-prev-month" class="btn-icon" title="Previous Month">&lt;</button>
+              <h3 id="cal-month-title">August 2026</h3>
+              <button id="cal-next-month" class="btn-icon" title="Next Month">&gt;</button>
+              <button id="cal-today" class="btn-secondary" style="padding:6px 12px; font-size:0.85rem;">Today</button>
+            </div>
+
+            <div>
+              <button id="btn-add-leave" class="btn-primary">
+                <span>+</span> Add Leave Plan
+              </button>
+            </div>
+          </div>
+
+          <div class="calendar-grid">
+            <div class="cal-header-day">Sun</div>
+            <div class="cal-header-day">Mon</div>
+            <div class="cal-header-day">Tue</div>
+            <div class="cal-header-day">Wed</div>
+            <div class="cal-header-day">Thu</div>
+            <div class="cal-header-day">Fri</div>
+            <div class="cal-header-day">Sat</div>
+            
+            <div id="calendar-grid-cells" style="display: contents;"></div>
+          </div>
+        </div>
+
+        <!-- PANEL 2: JOB PLANNING TRACKER -->
+        <div id="activities-view" class="view-panel safety-panel">
+          
+          <!-- Top Job Plan Creation Card -->
+          <div class="activity-form-card">
+            <div class="activity-form-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Create New Job Plan
+            </div>
+            
+            <form id="new-activity-form">
+              <div class="form-grid" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr 2fr auto;">
+                
+                <div class="form-group">
+                  <label for="act-name">Job Plan Details *</label>
+                  <input type="text" id="act-name" class="form-input" placeholder="e.g. System Inspection & Audit" required>
+                </div>
+
+                <div class="form-group">
+                  <label for="act-from-date">From Date *</label>
+                  <input type="date" id="act-from-date" class="form-input" required>
+                </div>
+
+                <div class="form-group">
+                  <label for="act-to-date">To Date *</label>
+                  <input type="date" id="act-to-date" class="form-input" required>
+                </div>
+
+                <div class="form-group">
+                  <label for="act-is-major">Major Job Plan? *</label>
+                  <select id="act-is-major" class="form-select">
+                    <option value="No">No</option>
+                    <option value="Yes">⭐ Yes</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="act-priority">Priority *</label>
+                  <select id="act-priority" class="form-select">
+                    <option value="High">🚨 High</option>
+                    <option value="Medium" selected>⚡ Medium</option>
+                    <option value="Low">🔹 Low</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label>Responsible Officers (Multiple) *</label>
+                  <div class="person-tag-container">
+                    <div id="act-person-chips" style="display:flex; flex-wrap:wrap; gap:4px;"></div>
+                    <select id="act-person-dropdown" class="chip-input-select">
+                      <option value="">+ Select Officer...</option>
+                    </select>
+                    <button type="button" id="btn-add-custom-person" style="background:none; border:none; color:var(--primary-color); font-weight:700; font-size:0.8rem; cursor:pointer; padding:0 4px;">
+                      + Custom
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <button type="submit" class="btn-primary" style="height: 40px;">
+                    Add Job Plan
+                  </button>
+                </div>
+
+              </div>
+            </form>
+          </div>
+
+          <!-- MULTI-CRITERIA FILTER BAR -->
+          <div style="background:#f1f5f9; border:1px solid #cbd5e1; border-radius:8px; padding:10px 14px; margin-bottom:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; font-size:0.82rem; flex-shrink:0;">
+            <div style="font-weight:700; color:var(--primary-dark); display:flex; align-items:center; gap:4px;">
+              🔍 Filters:
+            </div>
+            
+            <div style="display:flex; align-items:center; gap:4px;">
+              <span>From:</span>
+              <input type="date" id="filter-from-date" class="form-input" style="padding:4px 6px; font-size:0.8rem; width:120px;">
+              <span>To:</span>
+              <input type="date" id="filter-to-date" class="form-input" style="padding:4px 6px; font-size:0.8rem; width:120px;">
+            </div>
+
+            <div style="display:flex; align-items:center; gap:4px;">
+              <span>Major:</span>
+              <select id="filter-major" class="form-select" style="padding:4px 6px; font-size:0.8rem; width:80px;">
+                <option value="ALL">All</option>
+                <option value="Yes">⭐ Yes</option>
+                <option value="No">No</option>
+              </select>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:4px;">
+              <span>Priority:</span>
+              <select id="filter-priority" class="form-select" style="padding:4px 6px; font-size:0.8rem; width:95px;">
+                <option value="ALL">All</option>
+                <option value="High">🚨 High</option>
+                <option value="Medium">⚡ Medium</option>
+                <option value="Low">🔹 Low</option>
+              </select>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:4px;">
+              <span>Officer:</span>
+              <select id="filter-officer" class="form-select" style="padding:4px 6px; font-size:0.8rem; width:140px;">
+                <option value="ALL">All Officers</option>
+              </select>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:4px;">
+              <span>Status:</span>
+              <select id="filter-status" class="form-select" style="padding:4px 6px; font-size:0.8rem; width:110px;">
+                <option value="ALL">All Status</option>
+                <option value="Pending">🚨 Pending</option>
+                <option value="Completed">✅ Completed</option>
+              </select>
+            </div>
+
+            <button id="btn-reset-filters" class="btn-secondary" style="padding:4px 10px; font-size:0.78rem; margin-left:auto;">
+              🔄 Reset Filters
+            </button>
+          </div>
+
+          <!-- JOB PLANNING TABLE -->
+          <div class="activities-table-wrapper">
+            <table class="activities-table">
+              <thead>
+                <tr>
+                  <th style="width: 50px;">Sl. No.</th>
+                  <th>Job Plan Details</th>
+                  <th>Responsible Person(s)</th>
+                  <th>Duration (From - To)</th>
+                  <th style="width: 110px;">Major Job</th>
+                  <th style="width: 100px;">Priority</th>
+                  <th>Current Status & History</th>
+                  <th style="width: 130px;">Options</th>
+                </tr>
+              </thead>
+              <tbody id="activities-tbody"></tbody>
+            </table>
+          </div>
+
+        </div>
+
+        <!-- PANEL 3: ROUTINE JOBS TRACKER -->
+        <div id="routine-jobs-view" class="view-panel safety-panel">
+          
+          <!-- Top Routine Job Creation Card -->
+          <div class="activity-form-card">
+            <div class="activity-form-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Create New Routine Job
+            </div>
+            
+            <form id="new-routine-job-form">
+              <div class="form-grid" style="grid-template-columns: 2fr 1.2fr 1.2fr 1.3fr auto;">
+                
+                <div class="form-group">
+                  <label for="rj-name">Routine Job Details *</label>
+                  <input type="text" id="rj-name" class="form-input" placeholder="e.g. Daily PPE Checklist & Hydrant Inspection" required>
+                </div>
+
+                <div class="form-group">
+                  <label for="rj-primary-officer">Responsible Officer *</label>
+                  <select id="rj-primary-officer" class="form-select" required></select>
+                </div>
+
+                <div class="form-group">
+                  <label for="rj-second-officer">Second Line Officer</label>
+                  <select id="rj-second-officer" class="form-select"></select>
+                </div>
+
+                <div class="form-group">
+                  <label for="rj-nature">Nature / Frequency *</label>
+                  <select id="rj-nature" class="form-select" required>
+                    <option value="Continuous">Continuous</option>
+                    <option value="Daily" selected>Daily</option>
+                    <option value="Weekly">Weekly</option>
+                    <option value="Fortnightly">Fortnightly</option>
+                    <option value="Monthly">Monthly</option>
+                    <option value="Quarterly">Quarterly</option>
+                    <option value="Half Yearly">Half Yearly</option>
+                    <option value="Annualy">Annualy</option>
+                    <option value="Bi annualy">Bi annualy</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div id="routine-nature-custom-group" class="form-group" style="display:none; grid-column: span 2;">
+                  <label for="rj-nature-custom">Specify Custom Frequency *</label>
+                  <input type="text" id="rj-nature-custom" class="form-input" placeholder="e.g. Shiftwise / Tri-weekly">
+                </div>
+
+                <div>
+                  <button type="submit" class="btn-primary" style="height: 40px;">
+                    Add Routine Job
+                  </button>
+                </div>
+
+              </div>
+            </form>
+          </div>
+
+          <!-- ROUTINE JOBS MULTI-CRITERIA FILTER BAR -->
+          <div style="background:#f1f5f9; border:1px solid #cbd5e1; border-radius:8px; padding:10px 14px; margin-bottom:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; font-size:0.82rem; flex-shrink:0;">
+            <div style="font-weight:700; color:var(--primary-dark); display:flex; align-items:center; gap:4px;">
+              🔍 Routine Job Filters:
+            </div>
+
+            <div style="display:flex; align-items:center; gap:4px;">
+              <span>Nature:</span>
+              <select id="rj-filter-nature" class="form-select" style="padding:4px 6px; font-size:0.8rem; width:130px;">
+                <option value="ALL">All Frequencies</option>
+                <option value="Continuous">Continuous</option>
+                <option value="Daily">Daily</option>
+                <option value="Weekly">Weekly</option>
+                <option value="Fortnightly">Fortnightly</option>
+                <option value="Monthly">Monthly</option>
+                <option value="Quarterly">Quarterly</option>
+                <option value="Half Yearly">Half Yearly</option>
+                <option value="Annualy">Annualy</option>
+                <option value="Bi annualy">Bi annualy</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:4px;">
+              <span>Officer:</span>
+              <select id="rj-filter-officer" class="form-select" style="padding:4px 6px; font-size:0.8rem; width:140px;">
+                <option value="ALL">All Officers</option>
+              </select>
+            </div>
+
+            <button id="btn-reset-rj-filters" class="btn-secondary" style="padding:4px 10px; font-size:0.78rem; margin-left:auto;">
+              🔄 Reset Filters
+            </button>
+          </div>
+
+          <!-- ROUTINE JOBS TABLE -->
+          <div class="activities-table-wrapper">
+            <table class="activities-table">
+              <thead>
+                <tr>
+                  <th style="width: 50px;">Sl. No.</th>
+                  <th>Routine Job Details</th>
+                  <th>Responsible Officer (Editable)</th>
+                  <th>Second Line Officer (Editable)</th>
+                  <th>Nature / Frequency</th>
+                  <th style="width: 100px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="routine-jobs-tbody"></tbody>
+            </table>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+    <!-- PRIMARY TAB PANEL 1: SECTION MASTER REPORT (FOR DEPARTMENT HEAD) -->
+    <div id="dept-view-master-report" class="dept-view-panel" style="display: none;">
+      <div class="white-overlay-card">
+        
+        <!-- Header Controls -->
+        <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:15px 20px; margin-bottom:15px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <div>
+              <h2 style="margin:0; font-size:1.25rem; color:var(--primary-dark);">Section Master Overview</h2>
+              <div style="font-size:0.82rem; color:var(--text-muted);">Department Head Master Summary covering all section jobs and responsible officers</div>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:10px;">
+            <label for="master-dept-select" style="font-weight:700; font-size:0.88rem; color:var(--primary-dark);">Select Section:</label>
+            <select id="master-dept-select" class="form-select" style="padding:6px 12px; font-weight:600; border-color:var(--primary-color); min-width:240px;">
+              <option value="ALL">🌟 All Sections (Master HSE Overview)</option>
+              <option value="safety">1. Safety section</option>
+              <option value="fire">2. Fire section</option>
+              <option value="ohc">3. Occupational Health Center (OHC) section</option>
+              <option value="environment">4. Environment & Sustainability section</option>
+              <option value="psm">5. Process Safety Management (PSM) section</option>
+              <option value="electrical">6. Electrical Safety section</option>
+              <option value="contractor">7. Contractor Safety section</option>
+            </select>
+            <button onclick="window.print()" class="btn-secondary" style="padding:6px 12px; font-size:0.82rem;">
+              🖨️ Print Section Report
+            </button>
+          </div>
+        </div>
+
+        <div id="master-report-content"></div>
+
+      </div>
+    </div>
+
+    <!-- PRIMARY TAB PANEL 2: COMMON OFFICER WORK REPORT (ALL SECTIONS) -->
+    <div id="dept-view-officer-report" class="dept-view-panel" style="display: none;">
+      <div class="white-overlay-card">
+        
+        <!-- Header Controls -->
+        <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:15px 20px; margin-bottom:15px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <div>
+              <h2 style="margin:0; font-size:1.25rem; color:var(--primary-dark);">Individual Officer Work Assignment Report</h2>
+              <div style="font-size:0.82rem; color:var(--text-muted);">View all planned and routine jobs assigned to any officer across all HSE sections</div>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:10px;">
+            <label for="primary-report-officer-select" style="font-weight:700; font-size:0.88rem; color:var(--primary-dark);">Select Officer (All Sections):</label>
+            <select id="primary-report-officer-select" class="form-select" style="padding:6px 12px; font-weight:600; border-color:var(--primary-color); min-width:250px;"></select>
+            <button onclick="window.print()" class="btn-secondary" style="padding:6px 12px; font-size:0.82rem;">
+              🖨️ Print Officer Report
+            </button>
+          </div>
+        </div>
+
+        <div id="primary-officer-report-content"></div>
+
+      </div>
+    </div>
+
+    <!-- OFFICER MANAGEMENT (ROSTER) PANEL -->
+    <div id="dept-view-roster" class="dept-view-panel" style="display: none;">
+      <div class="white-overlay-card">
+        <div class="module-header">
+          <div class="module-title-group">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <h2>Officer Management & Department Roster</h2>
+          </div>
+          <p style="color:var(--text-muted); font-size:0.9rem;">
+            Add or remove officers for each department section. Updates automatically reflect in dropdowns across all modules and reports.
+          </p>
+        </div>
+
+        <div id="officer-roster-container" class="officer-roster-grid"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- MODAL 1: ADD / EDIT LEAVE PLAN -->
+  <div id="leave-modal" class="modal-backdrop">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="leave-modal-title">Add Team Leave Plan</h3>
+        <button class="modal-close" onclick="closeModal('leave-modal')">&times;</button>
+      </div>
+      <form id="leave-form">
+        <div class="modal-body" style="display:flex; flex-direction:column; gap:16px;">
+          
+          <div class="form-group">
+            <label for="leave-person-select">Select Officer *</label>
+            <select id="leave-person-select" class="form-select" required></select>
+          </div>
+
+          <div id="custom-person-group" class="form-group" style="display: none;">
+            <label for="leave-person-custom">Enter New Officer Name</label>
+            <input type="text" id="leave-person-custom" class="form-input" placeholder="e.g. Dhankar B P">
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+              <label for="leave-from-date">From Date *</label>
+              <input type="date" id="leave-from-date" class="form-input" required>
+            </div>
+
+            <div class="form-group">
+              <label for="leave-to-date">To Date *</label>
+              <input type="date" id="leave-to-date" class="form-input" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="leave-reason">Reason / Remarks</label>
+            <input type="text" id="leave-reason" class="form-input" placeholder="Optional notes (e.g. Personal work, Training)">
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeModal('leave-modal')">Cancel</button>
+          <button type="submit" class="btn-primary">Save Leave Entry</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: LEAVE DETAIL, EDIT & REMOVE -->
+  <div id="leave-detail-modal" class="modal-backdrop">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Leave Details</h3>
+        <button class="modal-close" onclick="closeModal('leave-detail-modal')">&times;</button>
+      </div>
+      <div id="leave-detail-body" class="modal-body"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeModal('leave-detail-modal')">Close</button>
+        <button type="button" id="btn-edit-leave-trigger" class="btn-primary">✏️ Edit Leave Plan</button>
+        <button type="button" id="btn-delete-leave-confirm" class="btn-primary" style="background:var(--accent-red);">Remove Leave</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: UPDATE ACTIVITY STATUS -->
+  <div id="update-status-modal" class="modal-backdrop">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Update Job Status</h3>
+        <button class="modal-close" onclick="closeModal('update-status-modal')">&times;</button>
+      </div>
+      <div class="modal-body" style="display:flex; flex-direction:column; gap:16px;">
+        <div style="background:#f1f5f9; padding:12px; border-radius:8px; font-weight:600; color:var(--primary-dark);">
+          Job / Task: <span id="status-modal-act-title"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="status-author-select">Updated By (Officer) *</label>
+          <select id="status-author-select" class="form-select"></select>
+        </div>
+
+        <div class="form-group">
+          <label for="status-new-select">New Status *</label>
+          <select id="status-new-select" class="form-select">
+            <option value="Pending">🚨 Pending</option>
+            <option value="Completed">✅ Completed</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="status-note-input">Status Update Note / Remarks *</label>
+          <textarea id="status-note-input" class="form-input" rows="3" placeholder="Enter progress details, inspection finding, or completion remarks..." required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeModal('update-status-modal')">Cancel</button>
+        <button type="button" id="btn-save-status-update" class="btn-primary">Save & Log Status</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: VIEW STATUS HISTORY LOGS -->
+  <div id="history-modal" class="modal-backdrop">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Status History Audit Trail</h3>
+        <button class="modal-close" onclick="closeModal('history-modal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="background:#e0f2fe; padding:12px; border-radius:8px; font-weight:600; color:#0369a1; margin-bottom:16px;">
+          Job / Task: <span id="history-modal-act-title"></span>
+        </div>
+        <div id="history-timeline" class="timeline"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeModal('history-modal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- External Script Fallbacks -->
+  <script src="js/store.js"></script>
+  <script src="js/department.js"></script>
+  <script src="js/officers.js"></script>
+  <script src="js/app.js"></script>
+
+  <!-- Embedded Full Standalone Application Scripts -->
+  <script>
+    // Save Data File Button
+    document.getElementById('btn-export-data').addEventListener('click', () => {
+      if (window.hseStore) window.hseStore.exportDatabaseJSON();
+    });
+
+    // Load Data File Button
+    const fileInput = document.getElementById('import-file-input');
+    document.getElementById('btn-import-data-trigger').addEventListener('click', () => {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          try {
+            const jsonObj = JSON.parse(evt.target.result);
+            if (window.hseStore) window.hseStore.importDatabaseJSON(jsonObj);
+            alert('Successfully loaded data file into HSE Task Manager!');
+            location.reload();
+          } catch (err) {
+            alert('Invalid JSON data file.');
+          }
+        };
+        reader.readAsText(file);
+      }
+    });
+  </script>
+
+</body>
+</html>
